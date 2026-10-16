@@ -31,6 +31,24 @@ npm run build
 
 O CI roda os dois em todo PR. A branch `main` só recebe mudanças por Pull Request aprovado por quem mantém o projeto (veja `.github/CODEOWNERS`).
 
+## Estrutura do código
+
+```
+server/            API local servida pelo Vite (/api/*)
+  runner.ts        execução dos agentes (CLIs headless), worktrees, SSE
+  adapters.ts      Gemini e Codex: comando e leitura de eventos
+  connections.ts   conectar/desconectar contas e terminal de login
+  models.ts        modelos reais de cada provedor
+  triage.ts        Maestro (IA) · claudeAccount.ts · usage.ts
+src/
+  engine/          game.ts (estado da partida), maestro.ts (regras), realRunner.ts (ponte com o servidor)
+  components/      telas (Arena, Quadro, Ecossistema, Entregas, Contas...)
+  audio/           música de batalha (Web Audio)
+  sprites/ data/   pixel art, agentes e provedores
+scripts/gen-art.ts gera as imagens do README (npm run art)
+.claude/skills/    skill do Maestro
+```
+
 ## Mexendo nos agentes e no Maestro
 
 - Os agentes padrão estão em `src/data/agents.ts`. Se mudar o elenco, aumente `ROSTER_VERSION` para as partidas salvas receberem os novos.

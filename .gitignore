@@ -5,3 +5,4 @@ dist
 .arena-real.json
 .env*
 !.env.example
+scripts/.gen-art.mjs

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { PixelSprite } from '../sprites/PixelSprite';
 import type { Agent } from '../types';
 
@@ -15,12 +15,20 @@ const MODES = [
   { icon: '⚡', title: 'Execução real', text: 'O Claude Code roda de verdade, numa pasta de projeto sua, na sua máquina. Gasta tokens do seu plano.' },
 ];
 
-export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; onClose: () => void; onDemo: () => void; hosted: boolean }) {
+export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; onClose: (dontShowAgain: boolean) => void; onDemo: () => void; hosted: boolean }) {
+  const [hide, setHide] = useState(() => {
+    try {
+      return !!localStorage.getItem('agent-arena:welcome-hidden');
+    } catch {
+      return false;
+    }
+  });
+  const close = () => onClose(hide);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose(hide);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, hide]);
 
   return (
     <div className="welcome-overlay" role="dialog" aria-modal aria-label="Bem-vindo ao Agent Arena">
@@ -84,8 +92,8 @@ export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; 
         </section>
 
         <div className="welcome-cta">
-          <button className="btn gold" onClick={onClose}>Começar</button>
-          <button className="btn" onClick={() => { onDemo(); onClose(); }}>Explorar com tarefas de exemplo</button>
+          <button className="btn gold" onClick={close}>Começar</button>
+          <button className="btn" onClick={() => { onDemo(); close(); }}>Explorar com tarefas de exemplo</button>
         </div>
 
         <section className="welcome-support card">
@@ -101,7 +109,10 @@ export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; 
         </section>
 
         <footer className="welcome-foot muted small">
-          Você pode reabrir esta tela a qualquer momento pelo botão <b>?</b> no topo.
+          <label className="welcome-hide">
+            <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> Não mostrar esta tela ao abrir
+          </label>
+          <div>Você pode reabri-la a qualquer momento pelo botão <b>?</b> no topo.</div>
         </footer>
       </div>
     </div>

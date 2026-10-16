@@ -30,18 +30,19 @@ export function App() {
   const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco'>('arena');
   const [panel, setPanel] = useState<Panel>(null);
   const [real, setReal] = useState<RealUsage | null>(null);
-  // tela de boas-vindas: aparece na primeira visita e pelo botão ? no topo
+  // tela de boas-vindas: aparece sempre que abre (a menos que a pessoa peça para não mostrar) e pelo botão ? no topo
   const [welcome, setWelcome] = useState(() => {
     try {
-      return !localStorage.getItem('agent-arena:welcome-seen');
+      return !localStorage.getItem('agent-arena:welcome-hidden');
     } catch {
       return true;
     }
   });
-  const closeWelcome = () => {
+  const closeWelcome = (dontShowAgain = false) => {
     setWelcome(false);
     try {
-      localStorage.setItem('agent-arena:welcome-seen', '1');
+      if (dontShowAgain) localStorage.setItem('agent-arena:welcome-hidden', '1');
+      else localStorage.removeItem('agent-arena:welcome-hidden');
     } catch {
       /* sem storage: aparece de novo na próxima visita */
     }

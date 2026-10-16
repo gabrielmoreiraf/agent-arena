@@ -205,7 +205,7 @@ export function App() {
             </button>
           </div>
           {view === 'arena' ? (
-            <Arena state={state} onAgent={openAgent} onAccounts={() => setPanel('accounts')} onProjects={() => setPanel('projects')} onIntegrations={() => setPanel('integrations')} onControl={(a, id) => control(a, id)} onTask={(id) => setPanel({ task: id })} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
+            <Arena state={state} onAgent={openAgent} onAccounts={() => setPanel('accounts')} onProjects={() => setPanel('projects')} onControl={(a, id) => control(a, id)} onTask={(id) => setPanel({ task: id })} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
           ) : view === 'eco' ? (
             <Ecosystem state={state} projectName={projectName(runner.status)} onAgent={openAgent} />
           ) : view === 'done' ? (
@@ -247,7 +247,7 @@ export function App() {
         />
       )}
       {panel === 'projects' && <Projects status={runner.status} onClose={() => setPanel(null)} onSaved={runner.setStatus} />}
-      {panel === 'integrations' && <Integrations onClose={() => setPanel(null)} onImport={addTasks} />}
+      {panel === 'integrations' && <Integrations onClose={() => setPanel(null)} />}
       {panel && typeof panel === 'object' && 'task' in panel && (
         <TaskDetail
           key={panel.task}

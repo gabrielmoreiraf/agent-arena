@@ -27,7 +27,6 @@ Primeiros passos: **Contas & Tokens** (conecte só as contas que quiser) → �
 | Worktrees das tarefas | `~/.agent-arena/worktrees/` |
 | Credenciais locais (quando necessárias) | `~/.agent-arena/` (permissão restrita) |
 | Tarefas, histórico, placar, XP | `localStorage` do navegador, uma partida por projeto |
-| Tokens das integrações (ClickUp/Jira/Linear/GitHub) | `.env.local` (copie de `.env.example`; ignorado pelo git) |
 
 Contribuir? Leia o [CONTRIBUTING.md](CONTRIBUTING.md). Segurança: [SECURITY.md](SECURITY.md). Licença: [MIT](LICENSE).
 
@@ -42,12 +41,12 @@ Contribuir? Leia o [CONTRIBUTING.md](CONTRIBUTING.md). Segurança: [SECURITY.md]
 | **Terminal do agente** | Clique em qualquer agente (arena, deck ou mapa): vê ao vivo cada comando, leitura, edição e saída do Claude Code, com ⏸ Pausar / ▶ Retomar / ⏹ Parar. Pausar congela o processo (SIGSTOP) e retomar continua do mesmo ponto. ❚❚ no topo pausa todos; ⏹ Parar tudo cancela todos. Editar o agente fica no botão do terminal. |
 | **Quadro** | Kanban: Fila do Maestro → Em andamento → Revisão do QA → Concluído. |
 | **Projetos** | Cada projeto (pasta) tem a sua partida: tarefas, registro de batalha, placar e XP próprios. Trocar de projeto guarda a partida atual e abre a do outro (ou uma nova, zerada). "Recomeçar projeto" zera só o projeto aberto. |
-| **Fila** | Crie tarefas (cole várias linhas de uma vez), ou importe de uma integração. |
+| **Fila** | Crie tarefas (cole várias linhas de uma vez). |
 | **Registro de batalha** | Tudo o que o Maestro decidiu (e por quê), entregas, bugs devolvidos e a briga QA × Dev. |
 | **Barra de heróis** | Nível, XP, modelo em uso e o que cada agente está fazendo agora. |
 | **Placar (Tab)** | Feitas, bugs causados/achados, sequência, tokens, elo (Ferro → Lenda), MVP e o placar da rivalidade. |
 | **Contas & Tokens** | Claude, Codex, Gemini e OpenRouter, com modos **Janela 5h**, **Diário**, **Semanal** e **Mensal**, planos (Pro, Max 5x, Max 20x...) e limites editáveis. Mostra também a tabela de qual modelo o Maestro usa para cada peso. |
-| **Integrações** | ClickUp, Jira, Linear e GitHub Issues (credenciais no `.env.local`). |
+| **Integrações** | **Em breve**: ClickUp, Jira, Linear e GitHub Issues (o código de importação já existe em `server/integrations.ts`, mas a tela está desligada). |
 | **Agentes** | Clique num agente para editar nome, visual, cores, provedor, palavras-chave e **instruções próprias**. "+ Novo agente" recruta um personalizado. |
 
 ## Conta e uso do Claude (real)
@@ -104,9 +103,9 @@ Detalhes:
 - A configuração fica em `.arena-real.json` (fora do git). `ARENA_TARGET_DIR` e `CLAUDE_BIN` no `.env.local` também funcionam.
 - API: `GET /api/real/events` (SSE), `GET|POST /api/real/config`, `POST /api/real/projects` (create/attach/remove/pick), `POST /api/real/triage`, `POST /api/real/run`, `POST /api/real/cancel`, `POST /api/real/land`, `POST /api/real/discard`, `GET /api/real/log`, `POST /api/real/control`, `GET /api/real/changes`, `GET /api/real/preview/<arquivo>`, `POST /api/real/open`.
 
-## Integrações
+## Integrações (em breve)
 
-Copie `.env.example` para `.env.local`, preencha e reinicie o `npm run dev`.
+A importação de tarefas do ClickUp, Jira, Linear e GitHub Issues ainda não está liberada na interface.
 
 ## Estrutura
 

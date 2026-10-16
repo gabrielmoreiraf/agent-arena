@@ -128,7 +128,6 @@ interface Props {
   onAgent: (id: string) => void;
   onAccounts: () => void;
   onProjects: () => void;
-  onIntegrations: () => void;
   /** elixir = fração de tokens que ainda sobra na janela de 5h do Claude (0..1) */
   elixir?: number;
   elixirLabel?: string;
@@ -138,7 +137,7 @@ interface Props {
   onTask?: (taskId: string) => void;
 }
 
-export function Arena({ state, onAgent, onAccounts, onProjects, onIntegrations, elixir = 1, elixirLabel, onControl, onTask }: Props) {
+export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elixirLabel, onControl, onTask }: Props) {
   const now = Date.now();
   const handingOff = (t: Task) => !!t.assignedAt && now - t.assignedAt < SCROLL_HANDOFF_MS;
   const sideOf = (t: Task) => SIDE_OF[t.lane ?? 'mid'];
@@ -433,12 +432,11 @@ export function Arena({ state, onAgent, onAccounts, onProjects, onIntegrations, 
             <ol className="empty-steps">
               <li><b>Conecte uma conta</b> de IA (Claude, Codex, Gemini ou OpenRouter): só as que você quiser.</li>
               <li><b>Escolha o projeto</b>: crie uma pasta nova ou anexe uma que já existe.</li>
-              <li><b>Escreva uma tarefa</b> na fila (ou importe do ClickUp, Jira, Linear ou GitHub).</li>
+              <li><b>Escreva uma tarefa</b> na fila, ao lado.</li>
             </ol>
             <div className="btn-group">
               <button className="btn gold" onClick={onAccounts}>1 · Contas</button>
               <button className="btn gold" onClick={onProjects}>2 · Projeto</button>
-              <button className="btn" onClick={onIntegrations}>Importar tarefas</button>
             </div>
           </div>
         </div>

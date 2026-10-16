@@ -736,3 +736,5 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .arena-empty { z-index: 30; place-items: start center; padding-top: 18%; }
 .arena-empty .px { max-width: min(92%, 420px); background: var(--panel); box-shadow: 0 0 0 2px var(--gold-dim), 0 0 0 4px #000; }
 .arena-wrap .arena.cr { max-width: calc((100vh - 200px) * 1.2); }
+.card.soon { opacity: .75; }
+.soon-tag { font-size: 6px; color: var(--gold); margin-left: 4px; }

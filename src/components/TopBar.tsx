@@ -97,7 +97,7 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
       <div className="btn-group">
         <button className="btn" onClick={onScore}>Placar [Tab]</button>
         <button className="btn" onClick={onAccounts}>Contas & Tokens</button>
-        <button className="btn" onClick={onIntegrations}>Integrações</button>
+        <button className="btn" onClick={onIntegrations} title="Em breve">Integrações <span className="soon-tag">em breve</span></button>
         <button className="btn" onClick={onAbout} title="O que é o Agent Arena e como funciona" aria-label="Sobre o Agent Arena">?</button>
       </div>
     </header>

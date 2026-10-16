@@ -3,7 +3,7 @@ import { PixelSprite } from '../sprites/PixelSprite';
 import type { Agent } from '../types';
 
 const STEPS = [
-  { icon: '📜', title: 'Você cria a tarefa', text: 'Escreva o que precisa ser feito (ou importe do ClickUp, Jira, Linear e GitHub). Ela chega como um pergaminho.' },
+  { icon: '📜', title: 'Você cria a tarefa', text: 'Escreva o que precisa ser feito. Ela chega como um pergaminho. (Importar do ClickUp, Jira, Linear e GitHub: em breve.)' },
   { icon: '🎼', title: 'O Maestro lê e decide', text: 'Ele mede a complexidade (P, M ou G), escolhe o agente certo e o modelo certo: Haiku, Sonnet ou Opus.' },
   { icon: '⚔️', title: 'O agente enfrenta o monstro', text: 'Cada tarefa é um monstro na arena. O agente trabalha de verdade no seu projeto e a barra de vida mostra o progresso.' },
   { icon: '🔍', title: 'O QA revisa (e implica)', text: 'O QA, que odeia devs, lê o diff, roda os testes e aprova ou devolve com um comentário ácido.' },

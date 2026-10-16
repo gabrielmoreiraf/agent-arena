@@ -738,3 +738,9 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .arena-wrap .arena.cr { max-width: calc((100vh - 200px) * 1.2); }
 .card.soon { opacity: .75; }
 .soon-tag { font-size: 6px; color: var(--gold); margin-left: 4px; }
+.provider-logo.brand { display: grid; place-items: center; flex: none; box-shadow: 0 0 0 2px #000; }
+.provider-logo.brand .mark { width: 62%; height: 62%; background: #fff; -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
+
+.conn-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmd { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.cmd code { flex: 1; min-width: 0; word-break: break-all; padding: 4px 6px; background: #070a12; }

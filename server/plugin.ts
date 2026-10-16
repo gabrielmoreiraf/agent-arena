@@ -3,6 +3,7 @@ import type { Plugin } from 'vite';
 import { exportAgents } from './exportAgents';
 import { INTEGRATIONS, importFrom, integrationStatus, type IntegrationId } from './integrations';
 import { claudeAccount } from './claudeAccount';
+import { allStatus, cancelSession, disconnect, getSession, openInTerminal, openrouterAuthUrl, openrouterCallback, openUrl, saveKey, sendInput, startLogin, type ProviderKey } from './connections';
 import { Runner } from './runner';
 import { triageWithClaude } from './triage';
 import { readUsage } from './usage';
@@ -65,6 +66,78 @@ export function arenaApi(env: Record<string, string>, root: string): Plugin {
             const { agents } = await body(req);
             // grava no PROJETO escolhido (onde o Claude Code vai usar os subagentes), nunca dentro do Agent Arena
             return send(res, 200, { written: await exportAgents(runner.projectDir(), agents ?? [], root) });
+          }
+
+          // ---- conexões com as contas de IA (conectar / desconectar) ----
+          if (url.pathname === '/api/connections' && req.method === 'GET') return send(res, 200, await allStatus(runner.bin));
+          if (url.pathname === '/api/connections/login' && req.method === 'POST') {
+            const { provider, method } = await body(req);
+            try {
+              if (provider === 'openrouter') {
+                // OAuth no navegador: o OpenRouter devolve o código para /api/auth/openrouter/callback
+                const authUrl = openrouterAuthUrl(`http://${req.headers.host}`);
+                openUrl(authUrl);
+                return send(res, 200, { opened: authUrl });
+              }
+              if (provider === 'gemini') {
+                openInTerminal('gemini');
+                return send(res, 200, { terminal: true });
+              }
+              return send(res, 200, { session: startLogin(provider as ProviderKey, runner.bin, method) });
+            } catch (err) {
+              return send(res, 400, { error: err instanceof Error ? err.message : String(err) });
+            }
+          }
+          if (url.pathname === '/api/connections/session') {
+            const s = getSession(url.searchParams.get('id') ?? '');
+            return s ? send(res, 200, s) : send(res, 404, { error: 'Sessão não encontrada' });
+          }
+          if (url.pathname === '/api/connections/input' && req.method === 'POST') {
+            const { id, text } = await body(req);
+            try {
+              sendInput(id, String(text ?? ''));
+              return send(res, 200, { ok: true });
+            } catch (err) {
+              return send(res, 409, { error: err instanceof Error ? err.message : String(err) });
+            }
+          }
+          if (url.pathname === '/api/connections/cancel' && req.method === 'POST') {
+            cancelSession((await body(req)).id);
+            return send(res, 200, { ok: true });
+          }
+          if (url.pathname === '/api/connections/open' && req.method === 'POST') {
+            const { id, url: target } = await body(req);
+            const sess = getSession(id);
+            // só abre links que apareceram na saída do próprio login
+            if (!sess || !sess.links.includes(target)) return send(res, 400, { error: 'Link não reconhecido.' });
+            openUrl(target);
+            return send(res, 200, { ok: true });
+          }
+          if (url.pathname === '/api/connections/key' && req.method === 'POST') {
+            const { provider, key } = await body(req);
+            try {
+              await saveKey(provider, String(key ?? ''));
+              return send(res, 200, { ok: true });
+            } catch (err) {
+              return send(res, 400, { error: err instanceof Error ? err.message : String(err) });
+            }
+          }
+          if (url.pathname === '/api/connections/disconnect' && req.method === 'POST') {
+            try {
+              return send(res, 200, { message: await disconnect((await body(req)).provider, runner.bin) });
+            } catch (err) {
+              return send(res, 400, { error: err instanceof Error ? err.message : String(err) });
+            }
+          }
+          if (url.pathname === '/api/auth/openrouter/callback') {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            try {
+              await openrouterCallback(url.searchParams.get('state') ?? '', url.searchParams.get('code') ?? '');
+              return void res.end('<meta charset="utf-8"><body style="font-family:sans-serif;background:#0a0d18;color:#fff;display:grid;place-items:center;height:100vh"><div><h2>OpenRouter conectado ✔</h2><p>Pode fechar esta aba e voltar para o Agent Arena.</p></div>');
+            } catch (err) {
+              res.statusCode = 400;
+              return void res.end(`<meta charset="utf-8"><body style="font-family:sans-serif;background:#0a0d18;color:#fff;padding:40px"><h2>Não deu certo</h2><p>${String(err instanceof Error ? err.message : err).replace(/</g, '&lt;')}</p>`);
+            }
           }
 
           // ---- execução real (Claude Code headless) ----

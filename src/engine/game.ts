@@ -46,6 +46,7 @@ export type Action =
   | { type: 'triageDone'; taskId: string; result: AITriage }
   | { type: 'triageFailed'; taskId: string; error: string }
   | { type: 'real'; ev: RealEvent }
+  | { type: 'setConnected'; ids: string[] }
   | { type: 'switchProject'; dir: string; name: string }
   | { type: 'jobsStopped'; agentId?: string }
   | { type: 'landed'; taskId: string; sha: string; branch: string }
@@ -550,6 +551,11 @@ export function reducer(state: GameState, action: Action): GameState {
       s.projectDir = action.dir;
       if (saved) feed(s, { kind: 'system', text: `📁 De volta ao projeto "${action.name}".` });
       return s;
+    }
+    case 'setConnected': {
+      // só provedores realmente conectados (conta logada) aparecem e recebem tarefas
+      if (state.providers.every((p) => p.connected === action.ids.includes(p.id))) return state;
+      return { ...state, providers: state.providers.map((p) => ({ ...p, connected: action.ids.includes(p.id) })) };
     }
     case 'jobsStopped': {
       // parar vale na hora na tela, mesmo que o servidor tenha perdido o job (reinício)

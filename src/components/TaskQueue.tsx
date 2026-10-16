@@ -11,9 +11,12 @@ interface Props {
   /** nome do projeto (pasta) onde as tarefas novas vão rodar */
   project?: string;
   onProjects: () => void;
+  /** nenhuma conta de IA conectada: as tarefas não têm quem execute */
+  noAccount?: boolean;
+  onAccounts: () => void;
 }
 
-export function TaskQueue({ state, onAdd, onDelete, onRetry, onIntegrations, project, onProjects }: Props) {
+export function TaskQueue({ state, onAdd, onDelete, onRetry, onIntegrations, project, onProjects, noAccount, onAccounts }: Props) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [showDesc, setShowDesc] = useState(false);
@@ -41,6 +44,12 @@ export function TaskQueue({ state, onAdd, onDelete, onRetry, onIntegrations, pro
         <button className="btn sm" onClick={onIntegrations}>⇩ Importar</button>
       </div>
 
+      {noAccount && (
+        <button className="project-pick missing" onClick={onAccounts} title="Conectar uma conta de IA">
+          <span>🔌</span>
+          <span className="grow">Conecte uma conta de IA para começar</span>
+        </button>
+      )}
       <div className="add-task">
         <button className={`project-pick ${project ? '' : 'missing'}`} onClick={onProjects} title="Escolher, criar ou anexar a pasta do projeto">
           <span>📁</span>

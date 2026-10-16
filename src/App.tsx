@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import type { ConnectionStatus } from '../server/connections';
 import { Accounts } from './components/Accounts';
 import { AgentEditor, newAgent } from './components/AgentEditor';
 import { Arena } from './components/Arena';
@@ -112,6 +113,23 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // contas conectadas de verdade (lidas das CLIs); só elas recebem tarefas
+  const [conns, setConns] = useState<ConnectionStatus[] | null>(null);
+  const applyConns = useCallback((list: ConnectionStatus[]) => {
+    setConns(list);
+    dispatch({ type: 'setConnected', ids: list.filter((c) => c.connected).map((c) => c.id) });
+  }, []);
+  useEffect(() => {
+    const pull = () =>
+      fetch('/api/connections')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((l) => l && applyConns(l))
+        .catch(() => undefined);
+    void pull();
+    const id = setInterval(pull, 30_000);
+    return () => clearInterval(id);
+  }, [applyConns]);
+
   const flash = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
@@ -183,6 +201,8 @@ export function App() {
           project={projectName(runner.status)}
           onProjects={() => setPanel('projects')}
           onIntegrations={() => setPanel('integrations')}
+          noAccount={!!conns && !conns.some((c) => c.connected)}
+          onAccounts={() => setPanel('accounts')}
         />
 
         <section className="arena-wrap">
@@ -232,7 +252,7 @@ export function App() {
           real={real}
           now={now}
           onClose={() => setPanel(null)}
-          onUpdate={(provider) => dispatch({ type: 'updateProvider', provider })}
+          onConnections={applyConns}
           onRouting={(tier, providerId, modelId) => dispatch({ type: 'setRouting', tier, providerId, modelId })}
           onRefresh={() => refreshUsage(true)}
         />

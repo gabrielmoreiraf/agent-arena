@@ -46,7 +46,8 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
     }
   };
 
-  const ready = !!status?.claude && !!status.exists;
+  const loggedIn = !!status?.account?.loggedIn;
+  const ready = !!status?.claude && loggedIn && !!status.exists;
 
   return (
     <Modal
@@ -57,7 +58,7 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
         <>
           <button className="btn ghost" disabled={busy} onClick={() => save(false)}>Salvar</button>
           {!enabled && (
-            <button className="btn gold" disabled={busy || !cfg?.targetDir} onClick={() => save(true)}>
+            <button className="btn gold" disabled={busy || !cfg?.targetDir || !loggedIn} onClick={() => save(true)} title={loggedIn ? undefined : 'Faça login no Claude Code primeiro'}>
               Salvar e ligar
             </button>
           )}
@@ -81,6 +82,11 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
 
       <div className="mode-toggle">
         <span className={`status ${status?.claude ? 'ok' : 'off'}`}>{status?.claude ? `claude ${status.claude.split(' ')[0]}` : 'claude não encontrado'}</span>
+        {status?.claude && (
+          <span className={`status ${status.account?.loggedIn ? 'ok' : 'off'}`} title={status.account?.email}>
+            {status.account?.loggedIn ? `logado${status.account.plan ? ` · ${status.account.plan}` : ''}` : 'Claude não logado'}
+          </span>
+        )}
         <span className={`status ${connected ? 'ok' : 'off'}`}>{connected ? 'servidor conectado' : 'servidor desconectado'}</span>
         {status?.config.targetDir && (
           <span className={`status ${!status.exists ? 'off' : status.isGit ? 'ok' : 'warn'}`}>
@@ -132,7 +138,11 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
         teste/build; <code>git commit</code>, <code>push</code>, <code>merge</code>, <code>reset</code> e <code>rm -rf</code> ficam bloqueados. O QA não edita nada. Agentes de outros provedores (Codex, Gemini) rodam no Claude com o
         modelo do mesmo peso. Use um repositório de teste primeiro.
       </div>
-      {!ready && status && <div className="small bad">{!status.claude ? 'Instale o Claude Code e faça login (`claude`).' : 'Escolha um projeto: crie uma pasta nova ou anexe uma existente.'}</div>}
+      {!ready && status && <div className="small bad">{!status.claude
+            ? 'Instale o Claude Code (https://claude.com/claude-code).'
+            : !loggedIn
+              ? 'O Claude Code não está logado: rode `claude` no terminal e faça o login. Depois abra esta tela de novo.'
+              : 'Escolha um projeto: crie uma pasta nova ou anexe uma existente.'}</div>}
       {msg && <div className={`small ${msg.startsWith('Erro') ? 'bad' : 'good'}`}>{msg}</div>}
     </Modal>
   );

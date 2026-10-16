@@ -24,6 +24,15 @@ export interface RealUsage {
       };
   gemini: { detected: boolean };
   apiKeys: Record<ProviderId, boolean>;
+  /** conta do Claude Code lida da CLI (logada? plano? % real da sessão e da semana) */
+  account?: {
+    loggedIn: boolean;
+    email?: string;
+    authMethod?: string;
+    plan?: string;
+    windows: { label: string; pct: number; resets?: string }[];
+    error?: string;
+  };
   at: number;
 }
 
@@ -42,6 +51,14 @@ export function simulatedUsage(p: Provider, mode: WindowMode, now = Date.now()) 
 /** Uso real (logs locais) quando existe para aquele provedor/janela */
 export function realUsage(real: RealUsage | null, id: ProviderId, mode: WindowMode, limit?: number) {
   if (!real) return null;
+  // % real do plano vindo do /usage da própria CLI
+  if (id === 'claude' && real.account?.loggedIn && (mode === '5h' || mode === 'weekly')) {
+    const w = real.account.windows.find((x) => (mode === '5h' ? /session/i : /week \(all/i).test(x.label));
+    if (w) {
+      const tokens = real.claude.detected ? (mode === '5h' ? real.claude.windows['5h'].total : real.claude.windows.weekly.total) : 0;
+      return { total: tokens, resetsAt: mode === '5h' && real.claude.detected ? real.claude.windows['5h'].resetsAt : null, pct: w.pct, resetsText: w.resets };
+    }
+  }
   if (id === 'claude' && real.claude.detected) {
     if (mode === '5h') return { total: real.claude.windows['5h'].total, resetsAt: real.claude.windows['5h'].resetsAt, pct: null };
     if (mode === 'daily') return { total: real.claude.windows.daily.total, resetsAt: null, pct: null };

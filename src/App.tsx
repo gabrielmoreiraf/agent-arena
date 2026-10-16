@@ -73,8 +73,8 @@ export function App() {
   }, []);
 
   // uso real de tokens (logs locais) a cada 60s
-  const refreshUsage = useCallback(() => {
-    fetch('/api/usage')
+  const refreshUsage = useCallback((fresh?: boolean) => {
+    fetch(fresh === true ? '/api/usage?fresh=1' : '/api/usage')
       .then((r) => (r.ok ? r.json() : null))
       .then(setReal)
       .catch(() => setReal(null));
@@ -250,7 +250,7 @@ export function App() {
           onClose={() => setPanel(null)}
           onUpdate={(provider) => dispatch({ type: 'updateProvider', provider })}
           onRouting={(tier, providerId, modelId) => dispatch({ type: 'setRouting', tier, providerId, modelId })}
-          onRefresh={refreshUsage}
+          onRefresh={() => refreshUsage(true)}
         />
       )}
       {panel === 'real' && (

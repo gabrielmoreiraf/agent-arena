@@ -52,13 +52,18 @@ export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRef
       }
     >
       <div className="hint">
-        <b>Real</b> = lido dos logs das CLIs na sua máquina (Claude Code em <code>~/.claude</code>, Codex em <code>~/.codex</code>).{' '}
-        <b>Arena</b> = o que os agentes gastaram na simulação. Os limites dos planos são estimativas editáveis: os provedores não publicam um número exato.
+        <b>Claude</b> está conectado de verdade: a conta e a porcentagem de uso vêm direto do Claude Code (<code>claude auth status</code> e{' '}
+        <code>/usage</code>), sem estimativas. A <b>Execução real</b> do Agent Arena usa só o Claude. Codex, Gemini e OpenRouter ainda não
+        têm execução: valem só na simulação, com limites estimados e editáveis.
       </div>
 
       <div className="grid2">
         {state.providers.map((p) => (
-          <ProviderCard key={p.id} p={p} real={real} now={now} onUpdate={onUpdate} />
+          p.id === 'claude' && real?.account ? (
+            <ClaudeCard key={p.id} p={p} real={real} now={now} />
+          ) : (
+            <ProviderCard key={p.id} p={p} real={real} now={now} onUpdate={onUpdate} />
+          )
         ))}
       </div>
 
@@ -74,7 +79,7 @@ export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRef
               <tr>
                 <th>Peso</th>
                 {state.providers.map((p) => (
-                  <th key={p.id} style={{ color: p.color }}>{p.name}</th>
+                  <th key={p.id} style={{ color: p.color }}>{p.name}{p.id === 'claude' ? '' : ' (sim.)'}</th>
                 ))}
               </tr>
             </thead>
@@ -122,9 +127,7 @@ function ProviderCard({ p, real, now, onUpdate }: { p: Provider; real: RealUsage
           <div className="small muted">{p.models.map((m) => m.label).join(' · ')}</div>
         </div>
         <span className="spacer" />
-        <button className={`btn sm ${p.connected ? 'on' : ''}`} onClick={() => onUpdate({ ...p, connected: !p.connected })}>
-          {p.connected ? 'Conectado' : 'Conectar'}
-        </button>
+        <span className="status warn" title="A execução real hoje usa só o Claude Code">só simulação</span>
       </div>
 
       <div className="btn-group" style={{ flexWrap: 'wrap' }}>
@@ -208,6 +211,76 @@ function ProviderCard({ p, real, now, onUpdate }: { p: Provider; real: RealUsage
       {p.id === 'claude' && real?.claude.detected && Object.keys(real.claude.byModel).length > 0 && (
         <div className="small">
           <div className="section-label">Últimos 7 dias por modelo (real)</div>
+          {Object.entries(real.claude.byModel)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([m, n]) => (
+              <div key={m} className="row" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="mono">{m}</span>
+                <span>{fmtTokens(n)}</span>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Claude: tudo lido da CLI (conta, plano, % real da sessão de 5h e da semana) */
+function ClaudeCard({ p, real, now }: { p: Provider; real: RealUsage; now: number }) {
+  const acc = real.account!;
+  const sim = simulatedUsage(p, '5h', now);
+  const method = acc.authMethod === 'claude.ai' ? 'assinatura Claude' : acc.authMethod === 'api_key' ? 'chave de API' : acc.authMethod;
+  return (
+    <div className="card provider">
+      <div className="provider-head">
+        <span className="provider-logo" style={{ background: p.color }}>{p.name[0]}</span>
+        <div>
+          <div className="px-title" style={{ color: 'var(--text)' }}>{p.name}</div>
+          <div className="small muted">{p.models.map((m) => m.label).join(' · ')}</div>
+        </div>
+        <span className="spacer" />
+        <span className={`status ${acc.loggedIn ? 'ok' : 'off'}`}>{acc.loggedIn ? 'conectado' : 'não logado'}</span>
+      </div>
+
+      {acc.loggedIn ? (
+        <div className="small">
+          <div><b>{acc.email}</b></div>
+          <div className="muted">
+            {method}
+            {acc.plan ? ` · plano ${acc.plan}` : ''} · Claude Code {real.claude.detected ? 'com logs locais' : 'sem logs ainda'}
+          </div>
+        </div>
+      ) : (
+        <div className="hint card flow">
+          O Claude Code não está logado. No terminal, rode <code>claude</code> (ou <code>claude auth login</code>), faça o login e clique em
+          “Atualizar uso real”.
+        </div>
+      )}
+      {acc.error && <div className="small bad">{acc.error}</div>}
+
+      {acc.windows.map((w) => (
+        <div key={w.label} className="meter">
+          <div className="row">
+            <b>{w.label.replace('Current session', 'Sessão (janela de 5h)').replace('Current week', 'Semana')}</b>
+            <span>{Math.round(w.pct * 100)}% usado</span>
+          </div>
+          <Bar value={w.pct} color={meterColor(w.pct)} />
+          <div className="row small muted"><span>reseta {w.resets ?? '—'}</span></div>
+        </div>
+      ))}
+
+      <div className="meter">
+        <div className="row small">
+          <span>Gasto pelo Agent Arena (últimas 5h)</span>
+          <b>{fmtTokens(sim.total)}</b>
+        </div>
+        <div className="small muted">Soma dos tokens reais das execuções (dev, QA e Maestro) feitas por este painel.</div>
+      </div>
+
+      {real.claude.detected && Object.keys(real.claude.byModel).length > 0 && (
+        <div className="small">
+          <div className="section-label">Últimos 7 dias por modelo (todos os usos do Claude Code)</div>
           {Object.entries(real.claude.byModel)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)

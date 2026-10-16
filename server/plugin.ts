@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { exportAgents } from './exportAgents';
 import { INTEGRATIONS, importFrom, integrationStatus, type IntegrationId } from './integrations';
+import { claudeAccount } from './claudeAccount';
 import { Runner } from './runner';
 import { triageWithClaude } from './triage';
 import { readUsage } from './usage';
@@ -28,7 +29,10 @@ export function arenaApi(env: Record<string, string>, root: string): Plugin {
         if (!req.url?.startsWith('/api/')) return next();
         const url = new URL(req.url, 'http://localhost');
         try {
-          if (url.pathname === '/api/usage') return send(res, 200, await readUsage(env));
+          if (url.pathname === '/api/usage') {
+            const [usage, account] = await Promise.all([readUsage(env), claudeAccount(runner.bin, url.searchParams.has('fresh'))]);
+            return send(res, 200, { ...(usage as object), account });
+          }
 
           if (url.pathname === '/api/integrations') return send(res, 200, integrationStatus(env));
 

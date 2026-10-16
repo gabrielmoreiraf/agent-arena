@@ -16,6 +16,7 @@ export interface RealStatus {
   isGit: boolean;
   claude: string | null;
   running: number;
+  account?: { loggedIn: boolean; email?: string; plan?: string; authMethod?: string } | null;
 }
 
 export async function fetchRealStatus(): Promise<RealStatus | null> {

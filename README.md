@@ -35,6 +35,10 @@ Abre em http://127.0.0.1:5178
 | **Integrações** | ClickUp, Jira, Linear e GitHub Issues (credenciais no `.env.local`). |
 | **Agentes** | Clique num agente para editar nome, visual, cores, provedor, palavras-chave e **instruções próprias**. "+ Novo agente" recruta um personalizado. |
 
+## Conta e uso do Claude (real)
+
+A tela **Contas & Tokens** lê tudo direto do Claude Code, sem estimativas: `claude auth status` (e-mail, método, plano) e `claude -p /usage` (porcentagem real da sessão de 5h e da semana, com a hora do reset; não gasta tokens). O resultado fica em cache por 45s. Se o Claude Code não estiver logado, a Execução real fica bloqueada até você rodar `claude` e fazer login. Codex, Gemini e OpenRouter ainda não têm execução real: valem só na simulação, com limites estimados.
+
 ## Uso real de tokens
 
 O servidor local lê os logs das CLIs na sua máquina (nada sai dela):

@@ -17,7 +17,8 @@ export function HeroBar({ state, onAgent, onNew, onExport }: Props) {
         const lo = xpForLevel(lvl);
         const hi = xpForLevel(lvl + 1);
         const task = state.tasks.find((t) => t.id === a.currentTaskId);
-        const provider = state.providers.find((p) => p.id === a.providerId);
+        // na execução real todo agente roda no Claude, qualquer que seja o provedor configurado nele
+        const provider = state.providers.find((p) => p.id === (state.mode === 'real' ? 'claude' : a.providerId));
         const model = provider?.models.find((m) => m.id === task?.model);
         // custo em elixir: peso do modelo que o agente usa (Haiku 2, Sonnet 4, Opus 6 no Claude)
         const tier = task?.tier ?? { 'dev-junior': 'leve', 'dev-senior': 'pesado' }[a.role as string] ?? 'medio';

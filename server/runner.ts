@@ -12,6 +12,7 @@
  *   input + output + cache criado).
  */
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { claudeAccount } from './claudeAccount';
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { mkdir, symlink, writeFile } from 'node:fs/promises';
@@ -268,7 +269,8 @@ export class Runner {
     const version = await new Promise<string | null>((res) =>
       execFile(this.bin, ['--version'], { timeout: 10_000 }, (err, out) => res(err ? null : out.trim())),
     );
-    return { config: this.config, exists, isGit, claude: version, running: this.running() };
+    const account = version ? await claudeAccount(this.bin).catch(() => null) : null;
+    return { config: this.config, exists, isGit, claude: version, running: this.running(), account };
   }
 
   async setConfig(patch: Partial<RealConfig>) {

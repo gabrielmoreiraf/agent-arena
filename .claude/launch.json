@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "agent-arena",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd \"$HOME/Documents/agent-arena\" && npm run dev"
+      ],
+      "port": 5178,
+      "url": "http://127.0.0.1:5178"
+    }
+  ]
+}

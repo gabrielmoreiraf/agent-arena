@@ -17,4 +17,4 @@ O Agent Arena executa CLIs de IA (Claude Code, etc.) que **leem, editam e rodam 
 
 ## Reportando uma vulnerabilidade
 
-Use a aba **Security → Report a vulnerability** do repositório no GitHub (relato privado). Descreva o que acontece, como reproduzir e o impacto. Não publique detalhes antes da correção.
+Como o repositório não recebe issues, use **Security → Report a vulnerability** no GitHub (relato privado). Descreva o que acontece, como reproduzir e o impacto, e não publique detalhes antes da correção.

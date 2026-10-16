@@ -2,14 +2,21 @@ import { useState } from 'react';
 import { saveRealConfig, type RealStatus } from '../engine/realRunner';
 import { Modal } from './ui';
 
+const OFFLINE = 'Não encontrei o servidor local. Abra o painel por http://127.0.0.1:5178 (rode npm run dev na pasta do agent-arena). A versão da Vercel não acessa pastas do seu computador.';
+
 async function projects(body: Record<string, string>) {
-  const r = await fetch('/api/real/projects', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error);
+  let r: Response;
+  try {
+    r = await fetch('/api/real/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error(OFFLINE);
+  }
+  const data = await r.json().catch(() => ({ error: OFFLINE }));
+  if (!r.ok) throw new Error(data.error || OFFLINE);
   return data;
 }
 
@@ -60,6 +67,7 @@ export function Projects({ status, onClose, onSaved }: Props) {
         </button>
       }
     >
+      {status === null && <div className="hint card flow"><b>Sem servidor local.</b> {OFFLINE}</div>}
       <div className="hint">
         Cada tarefa roda dentro da pasta de um projeto, nunca dentro do Agent Arena. O projeto marcado vale para as próximas tarefas que você criar.
       </div>

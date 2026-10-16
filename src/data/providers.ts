@@ -28,9 +28,10 @@ export function defaultProviders(): Provider[] {
       connected: false,
       plan: 'Plus',
       models: [
-        { id: 'gpt-5-codex-mini', label: 'Codex Mini', tier: 'leve', weight: 0.4 },
-        { id: 'gpt-5-codex', label: 'Codex', tier: 'medio', weight: 1 },
-        { id: 'gpt-5.1-codex-max', label: 'Codex Max', tier: 'pesado', weight: 2 },
+        // sem chute: usa o modelo padrão da CLI até você escolher outro (a lista real aparece em Contas & Tokens)
+        { id: 'default', label: 'Padrão da CLI', tier: 'leve', weight: 0.5 },
+        { id: 'default', label: 'Padrão da CLI', tier: 'medio', weight: 1 },
+        { id: 'default', label: 'Padrão da CLI', tier: 'pesado', weight: 2 },
       ],
       limits: { '5h': 3_000_000, weekly: 40_000_000 },
       shownModes: ['5h', 'weekly'],
@@ -58,9 +59,9 @@ export function defaultProviders(): Provider[] {
       connected: false,
       plan: 'Pay-as-you-go',
       models: [
-        { id: 'anthropic/claude-haiku-4.5', label: 'Claude Haiku', tier: 'leve', weight: 0.4 },
-        { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet', tier: 'medio', weight: 1 },
-        { id: 'anthropic/claude-opus-4.1', label: 'Claude Opus', tier: 'pesado', weight: 2 },
+        { id: 'anthropic/claude-haiku-5.5', label: 'Claude Haiku 5.5', tier: 'leve', weight: 0.4 },
+        { id: 'anthropic/claude-sonnet-5.5', label: 'Claude Sonnet 5.5', tier: 'medio', weight: 1 },
+        { id: 'anthropic/claude-opus-5.5', label: 'Claude Opus 5.5', tier: 'pesado', weight: 2 },
       ],
       limits: { monthly: 100_000_000 },
       shownModes: ['monthly'],

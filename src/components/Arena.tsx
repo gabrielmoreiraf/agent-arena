@@ -31,10 +31,10 @@ const PRINCESS_ENEMY_Y = 24;
 const KING_OURS: Pt = [50, 99];
 const MAESTRO_POS: Pt = [50, 90];
 const PILE: Pt = [64, 95];
-const READING: Pt = [50, 74];
+const READING: Pt = [50, 62];
 const INCOMING_FROM: Pt = [50, 8];
 const CAMP: Pt[] = [
-  [30, 80], [70, 80], [36, 90], [64, 90], [24, 92], [76, 92], [38, 72], [62, 72], [50, 83],
+  [30, 80], [70, 80], [36, 90], [64, 90], [24, 92], [76, 92], [30, 70], [70, 70], [50, 83],
 ];
 
 // pergaminhos: a tarefa chega enrolada, o Maestro abre e lê, depois despacha

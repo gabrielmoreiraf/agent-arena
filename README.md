@@ -57,7 +57,7 @@ Contribuir? Leia o [CONTRIBUTING.md](CONTRIBUTING.md). Segurança: [SECURITY.md]
 |---|---|---|
 | **Claude Code** | `claude auth login` abre o navegador; o login roda como um terminal dentro do app. Mostra e-mail, plano e a % real da sessão de 5h e da semana (`claude auth status` e `/usage`, sem gastar tokens). | Testado de ponta a ponta |
 | **Gemini CLI** | Login Google no Terminal do macOS (`gemini`), chave de API (do Arena ou já configurada no Gemini CLI). | Dev testado de ponta a ponta; veredito do QA ainda não validado |
-| **Codex CLI** | `codex login` abre o navegador (precisa da CLI instalada). | **Experimental**: implementado pela documentação, ainda não testado |
+| **Codex CLI** | `codex login` abre o navegador (precisa da CLI instalada). | Dev testado de ponta a ponta (sandbox `workspace-write`); veredito do QA ainda não validado |
 | **OpenRouter** | OAuth no navegador ou chave colada; roda o Claude Code apontado para o OpenRouter. | **Experimental**: ainda não testado |
 
 Credenciais do próprio Arena (chaves) ficam em `~/.agent-arena/credentials.json` com permissão 0600 e nunca vão para o navegador. Os modelos de cada peso (leve/médio/pesado) são editáveis na tabela; para Gemini, Codex e OpenRouter dá para digitar o id exato do modelo.

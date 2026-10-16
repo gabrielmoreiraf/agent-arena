@@ -3,6 +3,7 @@ import type { Plugin } from 'vite';
 import { exportAgents } from './exportAgents';
 import { INTEGRATIONS, importFrom, integrationStatus, type IntegrationId } from './integrations';
 import { claudeAccount } from './claudeAccount';
+import { listModels } from './models';
 import { allStatus, cancelSession, disconnect, getSession, openInTerminal, openrouterAuthUrl, openrouterCallback, openUrl, saveKey, sendInput, startLogin, type ProviderKey } from './connections';
 import { Runner } from './runner';
 import { triageWithClaude } from './triage';
@@ -68,6 +69,15 @@ export function arenaApi(env: Record<string, string>, root: string): Plugin {
             return send(res, 200, { written: await exportAgents(runner.projectDir(), agents ?? [], root) });
           }
 
+          if (url.pathname === '/api/models') {
+            const provider = url.searchParams.get('provider') ?? 'claude';
+            try {
+              const seen = provider === 'claude' ? Object.keys(((await readUsage(env)) as any)?.claude?.byModel ?? {}) : [];
+              return send(res, 200, await listModels(provider, seen, url.searchParams.has('fresh')));
+            } catch (err) {
+              return send(res, 502, { error: err instanceof Error ? err.message : String(err) });
+            }
+          }
           // ---- conexões com as contas de IA (conectar / desconectar) ----
           if (url.pathname === '/api/connections' && req.method === 'GET') return send(res, 200, await allStatus(runner.bin));
           if (url.pathname === '/api/connections/login' && req.method === 'POST') {

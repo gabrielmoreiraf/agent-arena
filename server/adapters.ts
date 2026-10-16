@@ -28,14 +28,14 @@ export function otherCommand(i: OtherInput): { bin: string; args: string[]; env:
     return {
       bin: 'gemini',
       // dev: edita arquivos sem pedir; QA: modo somente leitura (plan). Comandos de shell não são aprovados automaticamente.
-      args: ['-p', full, ...(i.model ? ['-m', i.model] : []), '--approval-mode', i.review ? 'plan' : 'auto_edit', '-o', 'stream-json', '--skip-trust'],
+      args: ['-p', full, ...(i.model && i.model !== 'default' ? ['-m', i.model] : []), '--approval-mode', i.review ? 'plan' : 'auto_edit', '-o', 'stream-json', '--skip-trust'],
       env: i.geminiKey ? { GEMINI_API_KEY: i.geminiKey } : {},
     };
   }
   return {
     bin: 'codex',
     // sandbox do próprio Codex: dev só escreve dentro do worktree; QA só lê
-    args: ['exec', '--json', '--skip-git-repo-check', '--sandbox', i.review ? 'read-only' : 'workspace-write', '-C', i.dir, ...(i.model ? ['-m', i.model] : []), full],
+    args: ['exec', '--json', '--skip-git-repo-check', '--sandbox', i.review ? 'read-only' : 'workspace-write', '-C', i.dir, ...(i.model && i.model !== 'default' ? ['-m', i.model] : []), full],
     env: {},
   };
 }

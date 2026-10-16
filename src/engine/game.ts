@@ -27,7 +27,7 @@ export function initialState(): GameState {
     startedAt: Date.now(),
     routing: defaultRouting(),
     rosterVersion: ROSTER_VERSION,
-    modelsVersion: 2,
+    modelsVersion: 3,
   };
 }
 
@@ -420,6 +420,7 @@ export function reducer(state: GameState, action: Action): GameState {
         bounces: 0,
         createdAt: now + i,
         projectDir: action.projectDir,
+        forcedAgentId: r.agentId,
       }));
       // ignora duplicadas vindas da mesma integração
       const keys = new Set(s.tasks.map((t) => t.externalKey).filter(Boolean));
@@ -528,12 +529,14 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'triageDone':
       return withTaskProject(state, action.taskId, (s) => {
         const task = s.tasks.find((t) => t.id === action.taskId);
-        const agent = s.agents.find((a) => a.id === action.result.agentId);
+        // se você escolheu o agente ao criar a tarefa, o Maestro só mede tipo e tamanho
+        const forced = task?.forcedAgentId ? s.agents.find((a) => a.id === task.forcedAgentId) : undefined;
+        const agent = forced ?? s.agents.find((a) => a.id === action.result.agentId);
         const maestro = s.agents.find((a) => a.role === 'maestro');
         if (!task || task.assigneeId || !agent) return;
         spendReal(s, maestro, task, action.result.tokens);
         task.costUsd = (task.costUsd ?? 0) + action.result.costUsd;
-        assign(s, task, agent, action.result, ` · "${action.result.motivo}"`);
+        assign(s, task, agent, action.result, forced ? ` · agente escolhido por você · "${action.result.motivo}"` : ` · "${action.result.motivo}"`);
       });
     case 'triageFailed':
       return withTaskProject(state, action.taskId, (s) => {
@@ -619,11 +622,11 @@ export function loadState(): GameState {
       const s = JSON.parse(raw) as GameState & { mode?: string };
       delete s.mode;
       // modelos reais por provedor (v2): troca as listas e os ids de roteamento antigos
-      if ((s.modelsVersion ?? 1) < 2) {
+      if ((s.modelsVersion ?? 1) < 3) {
         const fresh = defaultProviders();
         s.providers = (s.providers ?? []).map((p) => ({ ...(fresh.find((f) => f.id === p.id) ?? p), events: p.events ?? [], connected: false }));
         s.routing = defaultRouting();
-        s.modelsVersion = 2;
+        s.modelsVersion = 3;
       }
       // sobras de versões antigas: tarefas de demonstração e simulação ficam para trás
       const real = <T extends { source?: string }>(list: T[]) => list.filter((t) => (t.source as string) !== 'demo');

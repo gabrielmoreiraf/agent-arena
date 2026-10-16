@@ -42,6 +42,7 @@ export function Accounts({ state, real, now, onClose, onRouting, onRefresh, onCo
   const [list, setList] = useState<ConnectionStatus[] | null>(null);
   const [err, setErr] = useState('');
   const [login, setLogin] = useState<{ provider: string; id: string } | null>(null);
+  const [models, setModels] = useState<Record<string, { models: { id: string; label: string }[]; source: string; note?: string; error?: string }>>({});
   const cb = useRef(onConnections);
   cb.current = onConnections;
 
@@ -65,6 +66,17 @@ export function Accounts({ state, real, now, onClose, onRouting, onRefresh, onCo
 
   const by = (id: string) => list?.find((c) => c.id === id);
   const connected = state.providers.filter((p) => by(p.id)?.connected);
+
+  // modelos que realmente existem em cada provedor conectado (OpenRouter pela API, Gemini pela API/CLI, Claude pelos logs...)
+  const wanted = connected.map((p) => p.id).join(',');
+  useEffect(() => {
+    for (const id of wanted.split(',').filter(Boolean)) {
+      fetch(`/api/models?provider=${id}`)
+        .then((r) => r.json())
+        .then((d) => setModels((m) => ({ ...m, [id]: d })))
+        .catch(() => undefined);
+    }
+  }, [wanted]);
 
   return (
     <Modal
@@ -121,7 +133,7 @@ export function Accounts({ state, real, now, onClose, onRouting, onRefresh, onCo
                       <td key={p.id}>
                         {p.id === 'claude' ? (
                           <select className="select" value={state.routing[tier][p.id] ?? ''} onChange={(e) => onRouting(tier, p.id, e.target.value)}>
-                            {p.models.map((m) => (
+                            {optionsFor(p, models[p.id], state.routing[tier][p.id]).map((m) => (
                               <option key={m.id} value={m.id}>{m.label}</option>
                             ))}
                           </select>
@@ -138,7 +150,7 @@ export function Accounts({ state, real, now, onClose, onRouting, onRefresh, onCo
                               title="Id do modelo (ex.: gemini-2.5-pro)"
                             />
                             <datalist id={`models-${p.id}`}>
-                              {p.models.map((m) => (
+                              {optionsFor(p, models[p.id], undefined).map((m) => (
                                 <option key={m.id} value={m.id}>{m.label}</option>
                               ))}
                             </datalist>
@@ -151,12 +163,35 @@ export function Accounts({ state, real, now, onClose, onRouting, onRefresh, onCo
               </tbody>
             </table>
           </div>
+          <div className="small muted">
+            {connected
+              .filter((p) => models[p.id])
+              .map((p) => {
+                const m = models[p.id];
+                return (
+                  <div key={p.id}>
+                    <b style={{ color: p.color }}>{p.name}</b>: {m.models.length} modelo(s) · fonte: {m.source}
+                    {m.note ? ` · ${m.note}` : ''}
+                  </div>
+                );
+              })}
+            <div>Clique num campo e digite para filtrar a lista real do provedor; também aceita qualquer id que a CLI/OpenRouter entenda.</div>
+          </div>
         </div>
       )}
 
       {login && <LoginTerminal sessionId={login.id} onClose={() => { setLogin(null); void refresh(); }} />}
     </Modal>
   );
+}
+
+/** opções do seletor: a lista real do provedor; se não chegou, os padrões; e sempre o valor atual */
+function optionsFor(p: Provider, list: { models: { id: string; label: string }[] } | undefined, current: string | undefined) {
+  const base = list?.models.length ? list.models : p.models.map((m) => ({ id: m.id, label: m.label }));
+  const seen = new Set<string>();
+  const out = base.filter((m) => !seen.has(m.id) && seen.add(m.id));
+  if (current && !seen.has(current)) out.unshift({ id: current, label: current });
+  return out;
 }
 
 function ProviderCard({
@@ -225,7 +260,7 @@ function ProviderCard({
           <div className="small muted">{p.models.map((m) => m.label).join(' · ')}</div>
         </div>
         <span className="spacer" />
-        {p.id !== 'claude' && <span className="status warn" title="Execução ainda pouco testada com este provedor">experimental</span>}
+        {p.id === 'openrouter' && <span className="status warn" title="Execução ainda não testada com este provedor">experimental</span>}
         <span className={`status ${statusClass}`}>{status}</span>
       </div>
 

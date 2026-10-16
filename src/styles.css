@@ -746,3 +746,29 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .cmd code { flex: 1; min-width: 0; word-break: break-all; padding: 4px 6px; background: #070a12; }
 .btn-group.music { align-items: center; }
 .vol { width: 80px; accent-color: var(--gold); cursor: pointer; }
+
+/* ---------- barra do topo (v2): linha de status + linha de menu ---------- */
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.topbar .spacer { display: block; flex: 1 1 0; min-width: 0; }
+.top-nav { flex: 1 1 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 8px; box-shadow: 0 -2px 0 var(--line); }
+.top-nav .btn-group { flex-wrap: wrap; align-items: center; }
+.top-nav .btn { height: 34px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.top-nav .music { display: inline-flex; align-items: center; gap: 6px; }
+.token-pills { display: flex; gap: 6px; }
+.token-pill { min-width: 96px; padding: 4px 8px; gap: 3px; }
+.token-pill .row b { font-family: var(--font-px); font-size: 9px; }
+.token-pill.missing { box-shadow: 0 0 0 2px var(--gold); }
+.tiny { font-size: 13px; line-height: 1; }
+@media (max-width: 760px) { .top-nav .spacer { display: none; } .top-nav .btn { padding: 4px 8px; } }
+
+.agent-pick { display: grid; gap: 4px; }
+.agent-pick > span { font-family: var(--font-px); font-size: 7px; color: var(--muted); text-transform: uppercase; }
+.how { font-size: 16px; line-height: 1.25; background: #070a12; box-shadow: 0 0 0 2px var(--line); padding: 6px 8px; }
+.how summary { cursor: pointer; color: var(--gold); }
+.how ol { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+.task .reason { font-size: 14px; line-height: 1.1; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* pergaminho lido pelo Maestro: acima do balão de fala, sem cobri-lo */
+.scroll-fx.reading { z-index: 8; }
+.scroll-fx.reading .scroll-title { max-width: 140px; }
+.unit .bubble { z-index: 12; }

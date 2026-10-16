@@ -1,4 +1,3 @@
-import { WINDOW_LABEL } from '../data/providers';
 import { realUsage, arenaUsage, type RealUsage } from '../engine/usage';
 import type { GameState } from '../types';
 import { Bar, clock, fmtTokens, meterColor } from './ui';
@@ -60,71 +59,81 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
         {state.providers
           .filter((p) => p.connected)
           .map((p) => {
-            const mode = p.shownModes[0] ?? '5h';
-            const limit = p.limits[mode] ?? 0;
-            const r = realUsage(real, p.id, mode, limit);
-            const used = r?.total ?? arenaUsage(p, mode, now).total;
-            const ratio = r?.pct ?? (limit ? used / limit : 0);
+            const r = realUsage(real, p.id, '5h', p.limits['5h'] ?? 0);
+            const arena = arenaUsage(p, '5h', now).total;
+            // % só quando o provedor informa o limite do plano de verdade (Claude); nos demais mostra o gasto do Arena
+            const pct = r?.pct ?? null;
             return (
-              <button key={p.id} className="token-pill" onClick={onAccounts} title={r ? 'Uso real lido dos logs locais' : 'Uso simulado pela arena'}>
+              <button
+                key={p.id}
+                className="token-pill"
+                onClick={onAccounts}
+                title={pct != null ? `${p.name}: ${Math.round(pct * 100)}% da janela de 5h (real). O Arena gastou ${fmtTokens(arena)} nas últimas 5h.` : `${p.name}: o provedor não informa o limite do plano. O Arena gastou ${fmtTokens(arena)} nas últimas 5h.`}
+              >
                 <div className="row">
                   <span className="name" style={{ color: p.color }}>{p.name}</span>
-                  <span>{Math.round(ratio * 100)}%</span>
+                  <b>{pct != null ? `${Math.round(pct * 100)}%` : fmtTokens(arena)}</b>
                 </div>
-                <Bar value={ratio} color={meterColor(ratio)} className="thin" />
-                <div className="row muted" style={{ fontSize: 14 }}>
-                  <span>{WINDOW_LABEL[mode]}{r ? ' · real' : ''}</span>
-                  <span>{fmtTokens(used)}</span>
-                </div>
+                {pct != null ? <Bar value={pct} color={meterColor(pct)} className="thin" /> : <div className="muted tiny">tokens do Arena · 5h</div>}
               </button>
             );
           })}
-      </div>
-
-      <div className="btn-group" role="group" aria-label="Execução">
-        <button className="btn sm" onClick={onRealConfig} title={realTarget ? `Projeto: ${realTarget}` : 'Configurar a execução dos agentes'}>
-          ⚙ Execução{realRunning ? ` (${realRunning} rodando)` : ''}
-        </button>
-      </div>
-
-      <div className="btn-group music" role="group" aria-label="Música">
-        <button
-          className={`btn sm ${music.on ? 'on' : ''}`}
-          onClick={() => onMusic({ on: !music.on })}
-          title={music.on ? 'Desligar a música de batalha' : 'Ligar a música de batalha'}
-          aria-pressed={music.on}
-        >
-          {music.on ? '🔊' : '🔇'} Música
-        </button>
-        {music.on && (
-          <input
-            className="vol"
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(music.volume * 100)}
-            onChange={(e) => onMusic({ volume: Number(e.target.value) / 100 })}
-            aria-label="Volume da música"
-            title={`Volume ${Math.round(music.volume * 100)}%`}
-          />
+        {!state.providers.some((p) => p.connected) && (
+          <button className="token-pill missing" onClick={onAccounts}>
+            <div className="row"><span className="name">Sem conta</span></div>
+            <div className="muted tiny">conectar</div>
+          </button>
         )}
       </div>
 
-      <div className="btn-group" role="group" aria-label="Velocidade">
-        <button className={`btn sm ${state.speed === 0 ? 'on' : ''}`} onClick={() => onSpeed(0)} title="Pausar tudo (na execução real, congela os agentes onde estão)">❚❚</button>
-        <button className={`btn sm ${state.speed === 1 ? 'on' : ''}`} onClick={() => onSpeed(1)} title="Normal">▶</button>
-        <button className={`btn sm ${state.speed === 3 ? 'on' : ''}`} onClick={() => onSpeed(3)} title="Rápido">▶▶</button>
-        {realRunning > 0 && (
-          <button className="btn sm danger" onClick={onStopAll} title="Para todos os agentes agora (cancela o que estão fazendo)">⏹ Parar tudo</button>
-        )}
-      </div>
+      {realRunning > 0 && (
+        <div className="btn-group" role="group" aria-label="Agentes em execução">
+          {state.speed === 0 ? (
+            <button className="btn sm gold" onClick={() => onSpeed(1)} title="Descongela os agentes de onde pararam">▶ Retomar</button>
+          ) : (
+            <button className="btn sm" onClick={() => onSpeed(0)} title="Congela os agentes onde estão, sem perder nada">⏸ Pausar tudo</button>
+          )}
+          <button className="btn sm danger" onClick={onStopAll} title="Cancela o que todos os agentes estão fazendo agora">⏹ Parar tudo</button>
+        </div>
+      )}
 
-      <div className="btn-group">
-        <button className="btn" onClick={onScore}>Placar [Tab]</button>
-        <button className="btn" onClick={onAccounts}>Contas & Tokens</button>
-        <button className="btn" onClick={onIntegrations} title="Em breve">Integrações <span className="soon-tag">em breve</span></button>
-        <button className="btn" onClick={onAbout} title="O que é o Agent Arena e como funciona" aria-label="Sobre o Agent Arena">?</button>
-      </div>
+      <nav className="top-nav" aria-label="Menu">
+        <div className="btn-group">
+          <button className="btn" onClick={onScore} title="Placar (tecla Tab)">🏆 Placar</button>
+          <button className="btn" onClick={onAccounts}>🔌 Contas & Tokens</button>
+          <button className="btn" onClick={onIntegrations} title="Em breve">🧩 Integrações <span className="soon-tag">em breve</span></button>
+        </div>
+        <div className="spacer" />
+        <div className="btn-group">
+          <button className="btn" onClick={onRealConfig} title={realTarget ? `Projeto: ${realTarget}` : 'Configurar a execução dos agentes'}>
+            ⚙ Execução{realRunning ? ` · ${realRunning} rodando` : ''}
+          </button>
+          <div className={`music ${music.on ? 'on' : ''}`}>
+            <button
+              className={`btn ${music.on ? 'on' : ''}`}
+              onClick={() => onMusic({ on: !music.on })}
+              title={music.on ? 'Desligar a música de batalha' : 'Ligar a música de batalha'}
+              aria-pressed={music.on}
+              aria-label="Música de batalha"
+            >
+              {music.on ? '🔊' : '🔇'} Música
+            </button>
+            {music.on && (
+              <input
+                className="vol"
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(music.volume * 100)}
+                onChange={(e) => onMusic({ volume: Number(e.target.value) / 100 })}
+                aria-label="Volume da música"
+                title={`Volume ${Math.round(music.volume * 100)}%`}
+              />
+            )}
+          </div>
+          <button className="btn" onClick={onAbout} title="O que é o Agent Arena e como funciona" aria-label="Sobre o Agent Arena">?</button>
+        </div>
+      </nav>
     </header>
   );
 }

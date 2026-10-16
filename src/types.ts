@@ -93,6 +93,8 @@ export interface Task {
   discarded?: boolean;
   /** Execução real: processo do agente congelado */
   paused?: boolean;
+  /** Agente escolhido pelo usuário ao criar a tarefa: o Maestro respeita */
+  forcedAgentId?: string;
   /** Provedor que executa o dev desta tarefa */
   providerId?: string;
   /** Pasta do projeto onde a tarefa roda (execução real) */
@@ -193,4 +195,6 @@ export interface RawTask {
   source: Source;
   externalKey?: string;
   url?: string;
+  /** agente escolhido por quem criou a tarefa (sem isso, o Maestro decide) */
+  agentId?: string;
 }

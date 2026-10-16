@@ -76,6 +76,11 @@ export function TaskCard({ task, state, onDelete, onRetry }: { task: Task; state
             )}
             {task.status === 'backlog' && <span>· na fila dele</span>}
           </div>
+          {task.reason && task.status !== 'done' && (
+            <div className="reason" title={task.reason}>
+              {task.forcedAgentId ? '👤' : '🎼'} {task.reason}
+            </div>
+          )}
           {task.blocked && (
             <div className="small bad blocked">
               ⚠️ {task.blocked}

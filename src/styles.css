@@ -772,3 +772,25 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .scroll-fx.reading { z-index: 8; }
 .scroll-fx.reading .scroll-title { max-width: 140px; }
 .unit .bubble { z-index: 12; }
+
+/* seletor de agente */
+.agent-select { position: relative; display: grid; gap: 4px; }
+.agent-select .label { font-family: var(--font-px); font-size: 7px; color: var(--muted); text-transform: uppercase; }
+.as-button, .as-opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; cursor: pointer; background: #070a12; color: var(--text); padding: 6px 8px; box-shadow: 0 0 0 2px var(--line); }
+.as-button:hover, .as-button[aria-expanded='true'] { box-shadow: 0 0 0 2px var(--gold); }
+.as-ico { width: 26px; text-align: center; font-size: 18px; flex: none; }
+.as-text { display: grid; gap: 1px; min-width: 0; flex: 1; }
+.as-text b { font-size: 17px; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-text small { font-size: 14px; line-height: 1.1; color: var(--muted); }
+.as-button .as-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-caret { color: var(--gold); flex: none; }
+.as-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60; display: grid; max-height: min(420px, 60vh); overflow-y: auto; background: var(--panel); box-shadow: 0 0 0 2px var(--gold), 0 0 0 4px #000, 0 10px 24px rgba(0,0,0,.6); }
+.as-opt { box-shadow: none; border-bottom: 2px solid var(--line); }
+.as-opt:hover { background: #151c34; }
+.as-opt.on { background: #1c2547; box-shadow: inset 3px 0 0 var(--gold); }
+.how-link { border: 0; background: none; color: var(--gold); cursor: pointer; text-align: left; font-size: 16px; padding: 2px 0; }
+.how-link:hover { text-decoration: underline; }
+.help-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.help-steps li { display: grid; grid-template-columns: 22px 26px 1fr; gap: 8px; align-items: start; font-size: 17px; line-height: 1.25; }
+.help-steps .n { font-family: var(--font-px); font-size: 8px; background: var(--gold); color: #000; padding: 4px 0; text-align: center; }
+.help-steps .ic { font-size: 18px; }

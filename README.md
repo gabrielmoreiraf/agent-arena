@@ -1,4 +1,4 @@
-# Agent Arena (nome provisório)
+# Agent Arena
 
 Painel em pixel art, estilo MOBA, para orquestrar subagentes de IA.
 Um **Maestro** recebe as tarefas, mede a complexidade, escolhe o agente e o modelo (Haiku, Sonnet ou Opus; ou o equivalente no Codex/Gemini) e acompanha até o **QA**, que odeia devs, aprovar.

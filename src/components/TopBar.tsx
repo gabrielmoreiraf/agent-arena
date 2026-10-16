@@ -17,9 +17,10 @@ interface Props {
   realTarget?: string;
   realRunning: number;
   onStopAll: () => void;
+  onAbout: () => void;
 }
 
-export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onIntegrations, onMode, onRealConfig, realTarget, realRunning, onStopAll }: Props) {
+export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onIntegrations, onMode, onRealConfig, realTarget, realRunning, onStopAll, onAbout }: Props) {
   const done = state.tasks.filter((t) => t.status === 'done').length;
   const doing = state.tasks.filter((t) => t.status === 'in_progress' || t.status === 'review').length;
   const queued = state.tasks.filter((t) => t.status === 'backlog').length;
@@ -39,7 +40,7 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
         </svg>
         <div>
           AGENT ARENA
-          <small>nome provisório</small>
+          <small>orquestre agentes de IA</small>
         </div>
       </div>
 
@@ -106,6 +107,7 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
         <button className="btn" onClick={onScore}>Placar [Tab]</button>
         <button className="btn" onClick={onAccounts}>Contas & Tokens</button>
         <button className="btn" onClick={onIntegrations}>Integrações</button>
+        <button className="btn" onClick={onAbout} title="O que é o Agent Arena e como funciona" aria-label="Sobre o Agent Arena">?</button>
       </div>
     </header>
   );

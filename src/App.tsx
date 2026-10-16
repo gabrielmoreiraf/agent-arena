@@ -3,6 +3,7 @@ import { Accounts } from './components/Accounts';
 import { AgentEditor, newAgent } from './components/AgentEditor';
 import { Arena } from './components/Arena';
 import { Board } from './components/Board';
+import { Welcome } from './components/Welcome';
 import { TaskDetail } from './components/TaskDetail';
 import { AgentTerminal } from './components/AgentTerminal';
 import { Deliveries } from './components/Deliveries';
@@ -29,6 +30,22 @@ export function App() {
   const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco'>('arena');
   const [panel, setPanel] = useState<Panel>(null);
   const [real, setReal] = useState<RealUsage | null>(null);
+  // tela de boas-vindas: aparece na primeira visita e pelo botão ? no topo
+  const [welcome, setWelcome] = useState(() => {
+    try {
+      return !localStorage.getItem('agent-arena:welcome-seen');
+    } catch {
+      return true;
+    }
+  });
+  const closeWelcome = () => {
+    setWelcome(false);
+    try {
+      localStorage.setItem('agent-arena:welcome-seen', '1');
+    } catch {
+      /* sem storage: aparece de novo na próxima visita */
+    }
+  };
   const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -168,6 +185,7 @@ export function App() {
         realTarget={runner.status?.config.targetDir}
         realRunning={state.tasks.filter((t) => t.jobId).length}
         onStopAll={stopAll}
+        onAbout={() => setWelcome(true)}
       />
 
       <div className="main">
@@ -280,6 +298,8 @@ export function App() {
           onDelete={(id) => dispatch({ type: 'deleteAgent', id })}
         />
       )}
+
+      {welcome && <Welcome agents={state.agents} onClose={closeWelcome} onDemo={demo} hosted={runner.status === null} />}
 
       {toast && <div className="toast px">{toast}</div>}
     </div>

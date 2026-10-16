@@ -731,3 +731,8 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 @media (min-width: 861px) { .topbar .spacer { display: block; } }
 .arena-tabs { flex-wrap: wrap; }
 @media (max-width: 860px) { .arena-tabs .spacer { flex-basis: 100%; height: 0; } }
+
+/* cartão de arena vazia: acima de unidades e monstros, e posicionado entre o Backlog e o rio */
+.arena-empty { z-index: 30; place-items: start center; padding-top: 18%; }
+.arena-empty .px { max-width: min(92%, 420px); background: var(--panel); box-shadow: 0 0 0 2px var(--gold-dim), 0 0 0 4px #000; }
+.arena-wrap .arena.cr { max-width: calc((100vh - 200px) * 1.2); }

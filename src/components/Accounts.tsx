@@ -37,6 +37,9 @@ interface Props {
 }
 
 export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRefresh }: Props) {
+  // na execução real só o Claude executa: os outros provedores ficam escondidos
+  const isReal = state.mode === 'real';
+  const providers = isReal ? state.providers.filter((p) => p.id === 'claude') : state.providers;
   return (
     <Modal
       title="Contas & Tokens"
@@ -53,12 +56,15 @@ export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRef
     >
       <div className="hint">
         <b>Claude</b> está conectado de verdade: a conta e a porcentagem de uso vêm direto do Claude Code (<code>claude auth status</code> e{' '}
-        <code>/usage</code>), sem estimativas. A <b>Execução real</b> do Agent Arena usa só o Claude. Codex, Gemini e OpenRouter ainda não
-        têm execução: valem só na simulação, com limites estimados e editáveis.
+        <code>/usage</code>), sem estimativas. {isReal ? (
+          <>A <b>Execução real</b> usa só o Claude, por isso os outros provedores ficam escondidos (eles voltam na Simulação).</>
+        ) : (
+          <>Codex, Gemini e OpenRouter ainda não têm execução: valem só na simulação, com limites estimados e editáveis.</>
+        )}
       </div>
 
       <div className="grid2">
-        {state.providers.map((p) => (
+        {providers.map((p) => (
           p.id === 'claude' && real?.account ? (
             <ClaudeCard key={p.id} p={p} real={real} now={now} />
           ) : (
@@ -78,7 +84,7 @@ export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRef
             <thead>
               <tr>
                 <th>Peso</th>
-                {state.providers.map((p) => (
+                {providers.map((p) => (
                   <th key={p.id} style={{ color: p.color }}>{p.name}{p.id === 'claude' ? '' : ' (sim.)'}</th>
                 ))}
               </tr>
@@ -91,7 +97,7 @@ export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRef
                       {TIER_LABEL[tier]} · {tier === 'leve' ? 'P' : tier === 'medio' ? 'M' : 'G'}
                     </span>
                   </td>
-                  {state.providers.map((p) => (
+                  {providers.map((p) => (
                     <td key={p.id}>
                       <select className="select" value={state.routing[tier][p.id] ?? ''} onChange={(e) => onRouting(tier, p.id, e.target.value)}>
                         {p.models.map((m) => (

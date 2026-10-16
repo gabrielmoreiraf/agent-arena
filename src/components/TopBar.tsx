@@ -57,7 +57,7 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
 
       <div className="token-pills">
         {state.providers
-          .filter((p) => p.connected)
+          .filter((p) => p.connected && (state.mode !== 'real' || p.id === 'claude'))
           .map((p) => {
             const mode = p.shownModes[0] ?? '5h';
             const limit = p.limits[mode] ?? 0;

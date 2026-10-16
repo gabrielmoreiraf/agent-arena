@@ -4,7 +4,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { defaultAgents } from '../src/data/agents';
-import { MONSTERS, MONSTER_INFO, MONSTER_BY_TYPE } from '../src/sprites/monsters';
+import { MONSTERS, MONSTER_BY_TYPE } from '../src/sprites/monsters';
 import { BASE_PALETTE, SPRITES } from '../src/sprites/sprites';
 
 const OUT = 'docs/img';
@@ -39,6 +39,27 @@ function svg(w: number, h: number, body: string) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges"><rect width="${w}" height="${h}" rx="14" fill="${PANEL}"/>${body}</svg>\n`;
 }
 
+type Lang = 'en' | 'pt-BR';
+const T = {
+  en: {
+    tagline: 'a team of AI agents, from Maestro to QA, running on your machine',
+    titles: { maestro: 'Orchestrator', junior: 'Junior Dev', pleno: 'Mid Dev', senior: 'Senior Dev', devops: 'DevOps', dba: 'Database', designer: 'UI/UX', qa: 'QA (hates devs)' } as Record<string, string>,
+    monstersTitle: 'Every monster is a task',
+    kinds: { feature: ['Feature', 'new functionality'], bug: ['Bug', 'something broken to fix'], infra: ['Infra', 'deploy, CI, servers'], database: ['Database', 'schema, queries, migrations'], test: ['Test', 'write or run tests'], refactor: ['Refactor', 'architecture, tech debt'] } as Record<string, string[]>,
+    suffix: '',
+  },
+  'pt-BR': {
+    tagline: 'uma equipe de agentes de IA, do Maestro ao QA, na sua máquina',
+    titles: { maestro: 'Orquestrador', junior: 'Dev Júnior', pleno: 'Dev Pleno', senior: 'Dev Sênior', devops: 'DevOps', dba: 'Banco de Dados', designer: 'UI/UX', qa: 'QA (odeia devs)' } as Record<string, string>,
+    monstersTitle: 'Cada monstro é uma tarefa',
+    kinds: { feature: ['Feature', 'funcionalidade nova'], bug: ['Bug', 'algo quebrado para corrigir'], infra: ['Infra', 'deploy, CI, servidor'], database: ['Banco', 'schema, query, migração'], test: ['Teste', 'escrever ou rodar testes'], refactor: ['Refatoração', 'arquitetura e dívida técnica'] } as Record<string, string[]>,
+    suffix: '.pt-BR',
+  },
+};
+
+for (const lang of ['en', 'pt-BR'] as Lang[]) {
+const L = T[lang];
+
 // ---- banner: título + elenco ----
 const agents = defaultAgents();
 const S = 7; // 16px * 7 = 112
@@ -49,31 +70,33 @@ agents.forEach((a, i) => {
   const x = 20 + i * CELL + (CELL - 16 * S) / 2;
   crew += rects(SPRITES[a.sprite] ?? SPRITES.bot, a.palette, S, x, 118);
   crew += `<text x="${20 + i * CELL + CELL / 2}" y="258" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700" ${FONT}>${a.name}</text>`;
-  crew += `<text x="${20 + i * CELL + CELL / 2}" y="276" text-anchor="middle" fill="#7d8590" font-size="11" ${FONT}>${a.title}</text>`;
+  crew += `<text x="${20 + i * CELL + CELL / 2}" y="276" text-anchor="middle" fill="#7d8590" font-size="11" ${FONT}>${L.titles[a.id] ?? a.title}</text>`;
 });
 const banner =
   `<text x="${bw / 2}" y="62" text-anchor="middle" fill="${GOLD}" font-size="44" font-weight="900" letter-spacing="6" ${FONT}>AGENT ARENA</text>` +
-  `<text x="${bw / 2}" y="92" text-anchor="middle" fill="#a8b0c2" font-size="15" ${FONT}>uma equipe de agentes de IA, do Maestro ao QA, na sua máquina</text>` +
+  `<text x="${bw / 2}" y="92" text-anchor="middle" fill="#a8b0c2" font-size="15" ${FONT}>${L.tagline}</text>` +
   crew;
-writeFileSync(`${OUT}/banner.svg`, svg(bw, 300, banner));
+writeFileSync(`${OUT}/banner${L.suffix}.svg`, svg(bw, 300, banner));
 
 // ---- monstros = tarefas ----
-const types = Object.keys(MONSTER_INFO);
+const types = Object.keys(L.kinds);
 const MS = 6;
 const MC = 150;
 const mw = types.length * MC + 20;
-let mons = `<text x="${mw / 2}" y="34" text-anchor="middle" fill="${GOLD}" font-size="16" font-weight="700" ${FONT}>Cada monstro é uma tarefa</text>`;
+let mons = `<text x="${mw / 2}" y="34" text-anchor="middle" fill="${GOLD}" font-size="16" font-weight="700" ${FONT}>${L.monstersTitle}</text>`;
 types.forEach((t, i) => {
   const m = MONSTERS[MONSTER_BY_TYPE[t]];
   const w = Math.max(...m.rows.map((r) => r.length));
   const x = 10 + i * MC + (MC - w * MS) / 2;
   mons += rects(m.rows, m.palette, MS, x, 56);
-  mons += `<text x="${10 + i * MC + MC / 2}" y="${56 + m.rows.length * MS + 22}" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700" ${FONT}>${MONSTER_INFO[t].kind}</text>`;
-  mons += `<text x="${10 + i * MC + MC / 2}" y="${56 + m.rows.length * MS + 40}" text-anchor="middle" fill="#7d8590" font-size="10.5" ${FONT}>${MONSTER_INFO[t].hint}</text>`;
+  mons += `<text x="${10 + i * MC + MC / 2}" y="${56 + m.rows.length * MS + 22}" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700" ${FONT}>${L.kinds[t][0]}</text>`;
+  mons += `<text x="${10 + i * MC + MC / 2}" y="${56 + m.rows.length * MS + 40}" text-anchor="middle" fill="#7d8590" font-size="10.5" ${FONT}>${L.kinds[t][1]}</text>`;
 });
-writeFileSync(`${OUT}/monsters.svg`, svg(mw, 56 + 12 * MS + 62, mons));
+writeFileSync(`${OUT}/monsters${L.suffix}.svg`, svg(mw, 56 + 12 * MS + 62, mons));
 
-// ---- provedores (logos oficiais em branco sobre a cor da marca) ----
+}
+
+// ---- providers (official logos in white on the brand color) ----
 const BRANDS = [
   { file: 'claude', name: 'Claude Code', bg: '#D97757' },
   { file: 'openai', name: 'Codex', bg: '#10A37F' },

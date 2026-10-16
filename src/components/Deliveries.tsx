@@ -75,7 +75,7 @@ export function Deliveries({ state, targetDir, ...actions }: { state: GameState;
                 <span className="grow">
                   <span className="title">{t.title}</span>
                   <span className="muted small">
-                    {agent?.name ?? '—'} · {when(t.doneAt)} · {isReal(t) ? `⚡ real${t.files?.length ? ` · ${t.files.length} arq.` : ''}` : '🎲 simulada'}
+                    {agent?.name ?? '—'} · {when(t.doneAt)} · {`${t.files?.length ? `${t.files.length} arq.` : 'sem arquivos'}`}
                   </span>
                 </span>
               </button>
@@ -179,10 +179,7 @@ function Detail({ task, state, targetDir, onLanded, onDiscarded }: { task: Task;
         </div>
 
         {!real && (
-          <div className="hint card flow">
-            🎲 Tarefa da <b>simulação</b>: nenhum arquivo foi alterado de verdade. Ligue <b>⚡ Execução real</b> no topo para os agentes trabalharem no
-            projeto alvo.
-          </div>
+          <div className="hint card flow">Esta tarefa foi concluída sem registrar arquivos nem saída (é de uma versão antiga do painel).</div>
         )}
 
         {task.reason && (

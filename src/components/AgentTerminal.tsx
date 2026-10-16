@@ -44,7 +44,7 @@ export function AgentTerminal({ agent, state, onClose, onEdit, onControl }: { ag
     if (stick && box.current) box.current.scrollTop = box.current.scrollHeight;
   }, [lines, stick]);
 
-  // sem execução real (simulação): mostra o registro de batalha do agente
+  // sem log do servidor (ex.: depois de reiniciar): mostra o registro de batalha do agente
   const sim = state.feed.filter((f) => f.agentId === agent.id).slice(0, 40).reverse();
   const task = state.tasks.find((t) => t.id === agent.currentTaskId);
   const act = (a: 'pause' | 'resume' | 'stop') => {

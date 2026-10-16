@@ -13,15 +13,14 @@ import { HeroBar } from './components/HeroBar';
 import { Integrations } from './components/Integrations';
 import { Projects, projectName } from './components/Projects';
 import { RealConfig } from './components/RealConfig';
-import { realUsage, simulatedUsage } from './engine/usage';
+import { realUsage, arenaUsage } from './engine/usage';
 import { Scoreboard } from './components/Scoreboard';
 import { TaskQueue } from './components/TaskQueue';
 import { TopBar } from './components/TopBar';
-import { DEMO_TASKS, type RawTask } from './data/seedTasks';
 import { loadState, reducer, saveState } from './engine/game';
 import { cancelJob, controlJobs, useRealRunner } from './engine/realRunner';
 import type { RealUsage } from './engine/usage';
-import type { Agent, RunMode } from './types';
+import type { Agent, RawTask } from './types';
 
 type Panel = null | 'score' | 'accounts' | 'integrations' | 'real' | 'projects' | { term: string } | { task: string } | { agentId: string } | { draft: Agent };
 
@@ -94,12 +93,6 @@ export function App() {
     if (currentDir) dispatch({ type: 'switchProject', dir: currentDir, name: projectName(runner.status, currentDir) ?? currentDir });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDir]);
-  const setMode = (mode: RunMode) => {
-    if (mode === state.mode) return;
-    const cfg = runner.status;
-    if (mode === 'real' && !(cfg?.exists && cfg.claude)) return setPanel('real');
-    dispatch({ type: 'setMode', mode });
-  };
   const deleteTask = (id: string) => {
     const jobId = latest.current.tasks.find((t) => t.id === id)?.jobId;
     if (jobId) cancelJob(jobId);
@@ -125,13 +118,6 @@ export function App() {
   };
 
   const addTasks = (tasks: RawTask[]) => dispatch({ type: 'addTasks', tasks, projectDir: projectRef.current });
-  const demo = () => addTasks(DEMO_TASKS);
-
-  // ?demo na URL já começa com as tarefas de exemplo
-  useEffect(() => {
-    if (new URLSearchParams(location.search).has('demo') && !latest.current.tasks.length) demo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const openAgent = (id: string) => setPanel({ term: id });
   // sem janela de confirmação do navegador (pode ser bloqueada no app): para na hora
   const control = (action: 'pause' | 'resume' | 'stop', agentId?: string) => {
@@ -159,7 +145,7 @@ export function App() {
   const claude = state.providers.find((p) => p.id === 'claude');
   const limit5h = claude?.limits['5h'] ?? 0;
   const r5 = claude ? realUsage(real, 'claude', '5h', limit5h) : null;
-  const used5 = r5?.total ?? (claude ? simulatedUsage(claude, '5h', now).total : 0);
+  const used5 = r5?.total ?? (claude ? arenaUsage(claude, '5h', now).total : 0);
   const elixir = limit5h ? Math.max(0, 1 - (r5?.pct ?? used5 / limit5h)) : 1;
 
   const editing =
@@ -181,7 +167,6 @@ export function App() {
         onScore={() => setPanel('score')}
         onAccounts={() => setPanel('accounts')}
         onIntegrations={() => setPanel('integrations')}
-        onMode={setMode}
         onRealConfig={() => setPanel('real')}
         realTarget={runner.status?.config.targetDir}
         realRunning={state.tasks.filter((t) => t.jobId).length}
@@ -197,7 +182,6 @@ export function App() {
           onRetry={(id) => dispatch({ type: 'retryTask', id })}
           project={projectName(runner.status)}
           onProjects={() => setPanel('projects')}
-          onDemo={demo}
           onIntegrations={() => setPanel('integrations')}
         />
 
@@ -221,7 +205,7 @@ export function App() {
             </button>
           </div>
           {view === 'arena' ? (
-            <Arena state={state} onAgent={openAgent} onDemo={demo} onIntegrations={() => setPanel('integrations')} onControl={(a, id) => control(a, id)} onTask={(id) => setPanel({ task: id })} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
+            <Arena state={state} onAgent={openAgent} onAccounts={() => setPanel('accounts')} onProjects={() => setPanel('projects')} onIntegrations={() => setPanel('integrations')} onControl={(a, id) => control(a, id)} onTask={(id) => setPanel({ task: id })} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
           ) : view === 'eco' ? (
             <Ecosystem state={state} projectName={projectName(runner.status)} onAgent={openAgent} />
           ) : view === 'done' ? (
@@ -257,15 +241,13 @@ export function App() {
         <RealConfig
           status={runner.status}
           connected={runner.connected}
-          enabled={state.mode === 'real'}
           onClose={() => setPanel(null)}
           onSaved={runner.setStatus}
-          onEnable={() => dispatch({ type: 'setMode', mode: 'real' })}
           onProjects={() => setPanel('projects')}
         />
       )}
       {panel === 'projects' && <Projects status={runner.status} onClose={() => setPanel(null)} onSaved={runner.setStatus} />}
-      {panel === 'integrations' && <Integrations onClose={() => setPanel(null)} onImport={addTasks} onDemo={demo} />}
+      {panel === 'integrations' && <Integrations onClose={() => setPanel(null)} onImport={addTasks} />}
       {panel && typeof panel === 'object' && 'task' in panel && (
         <TaskDetail
           key={panel.task}
@@ -300,7 +282,7 @@ export function App() {
         />
       )}
 
-      {welcome && <Welcome agents={state.agents} onClose={closeWelcome} onDemo={demo} hosted={runner.status === null} />}
+      {welcome && <Welcome agents={state.agents} onClose={closeWelcome} />}
 
       {toast && <div className="toast px">{toast}</div>}
     </div>

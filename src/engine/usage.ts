@@ -36,7 +36,7 @@ export interface RealUsage {
   at: number;
 }
 
-export function simulatedUsage(p: Provider, mode: WindowMode, now = Date.now()) {
+export function arenaUsage(p: Provider, mode: WindowMode, now = Date.now()) {
   const since = now - WINDOW_MS[mode];
   let total = 0;
   let first: number | null = null;

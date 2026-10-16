@@ -92,7 +92,7 @@ export function useRealRunner(state: GameState, dispatch: Dispatch<Action>, onJo
 
   useEffect(() => {
     fetchRealStatus().then(setStatus);
-  }, [state.mode]);
+  }, []);
 
   // SSE: fica sempre ligado, para não perder o fim de um job se o modo mudar no meio
   useEffect(() => {
@@ -121,14 +121,13 @@ export function useRealRunner(state: GameState, dispatch: Dispatch<Action>, onJo
     if (prevSpeed.current === state.speed) return;
     const wasPaused = prevSpeed.current === 0;
     prevSpeed.current = state.speed;
-    if (state.mode !== 'real') return;
     if (state.speed === 0) void controlJobs('pause');
     else if (wasPaused) void controlJobs('resume');
-  }, [state.speed, state.mode]);
+  }, [state.speed]);
 
   // Maestro de verdade: lê um pergaminho por vez assim que ele chega na base
   useEffect(() => {
-    if (state.mode !== 'real' || state.speed === 0 || reading.current) return;
+    if (state.speed === 0 || reading.current) return;
     const now = Date.now();
     // readingSince antigo = triagem que se perdeu num reload: lê de novo
     const task = state.tasks.find((t) => scrollArrived(t, now) && (!t.readingSince || now - t.readingSince > 120_000));
@@ -161,7 +160,7 @@ export function useRealRunner(state: GameState, dispatch: Dispatch<Action>, onJo
 
   // dispara jobs para quem está com tarefa e ainda não começou
   useEffect(() => {
-    if (state.mode !== 'real' || state.speed === 0 || !connected) return;
+    if (state.speed === 0 || !connected) return;
     const max = status?.config.maxParallel ?? 1;
     let running = state.tasks.filter((t) => t.jobId).length + launching.current.size;
     for (const agent of state.agents) {

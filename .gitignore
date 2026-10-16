@@ -3,6 +3,5 @@ dist
 .env.local
 .DS_Store
 .arena-real.json
-.vercel
 .env*
 !.env.example

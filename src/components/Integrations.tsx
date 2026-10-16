@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { RawTask } from '../data/seedTasks';
+import type { RawTask } from '../types';
 import { Modal } from './ui';
 
 interface Status {
@@ -15,7 +15,7 @@ const LOGO: Record<string, { bg: string; letter: string; hint: string }> = {
   github: { bg: '#24292f', letter: 'G', hint: 'Token fine-grained com leitura de Issues. GITHUB_REPO = dono/repo.' },
 };
 
-export function Integrations({ onClose, onImport, onDemo }: { onClose: () => void; onImport: (t: RawTask[]) => void; onDemo: () => void }) {
+export function Integrations({ onClose, onImport }: { onClose: () => void; onImport: (t: RawTask[]) => void }) {
   const [status, setStatus] = useState<Record<string, Status> | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<Record<string, string>>({});
@@ -49,7 +49,6 @@ export function Integrations({ onClose, onImport, onDemo }: { onClose: () => voi
       onClose={onClose}
       footer={
         <>
-          <button className="btn ghost" onClick={onDemo}>Carregar tarefas demo</button>
           <button className="btn" onClick={onClose}>Fechar</button>
         </>
       }

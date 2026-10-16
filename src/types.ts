@@ -19,7 +19,7 @@ export type TaskStatus = 'backlog' | 'in_progress' | 'review' | 'done';
 
 export type Lane = 'top' | 'mid' | 'bot' | 'jungle';
 
-export type Source = 'manual' | 'clickup' | 'jira' | 'linear' | 'github' | 'demo';
+export type Source = 'manual' | 'clickup' | 'jira' | 'linear' | 'github';
 
 export interface AgentStats {
   done: number;
@@ -149,8 +149,6 @@ export interface Bubble {
   until: number;
 }
 
-export type RunMode = 'sim' | 'real';
-
 /** Progresso de um agente dentro de uma partida (projeto) */
 export interface AgentProgress {
   xp: number;
@@ -168,8 +166,6 @@ export interface ProjectMatch {
 }
 
 export interface GameState {
-  /** 'sim' = barra de vida simulada; 'real' = Claude Code de verdade no projeto alvo */
-  mode: RunMode;
   agents: Agent[];
   tasks: Task[];
   feed: FeedItem[];
@@ -184,4 +180,13 @@ export interface GameState {
   projectDir?: string;
   /** partidas dos outros projetos, guardadas até você voltar para eles */
   matches?: Record<string, ProjectMatch>;
+}
+
+/** Tarefa vinda de fora (digitada, colada ou importada de uma integração) */
+export interface RawTask {
+  title: string;
+  description?: string;
+  source: Source;
+  externalKey?: string;
+  url?: string;
 }

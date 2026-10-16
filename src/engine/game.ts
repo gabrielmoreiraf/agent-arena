@@ -1,10 +1,9 @@
 import { ROSTER_VERSION, defaultAgents, emptyStats, levelOf } from '../data/agents';
 import { defaultProviders, defaultRouting, modelFor } from '../data/providers';
-import { DEV_REPLY, MAESTRO_QUOTES, QA_APPROVE, QA_REJECT, WORK_QUOTES, pick } from '../data/quotes';
-import type { RawTask } from '../data/seedTasks';
+import { DEV_REPLY, MAESTRO_QUOTES, QA_APPROVE, QA_REJECT, pick } from '../data/quotes';
 import type { RealEvent, Verdict } from '../../server/runner';
 import type { TriageResult as AITriage } from '../../server/triage';
-import type { Agent, FeedItem, GameState, ProjectMatch, Provider, RunMode, Task, Tier } from '../types';
+import type { Agent, FeedItem, GameState, ProjectMatch, Provider, RawTask, Task, Tier } from '../types';
 import { effortFor, reasonFor, tierOf, triage, type Classification } from './maestro';
 
 let seq = 0;
@@ -12,7 +11,6 @@ export const uid = (p = 'id') => `${p}_${Date.now().toString(36)}_${(seq++).toSt
 
 export function initialState(): GameState {
   return {
-    mode: 'sim',
     agents: defaultAgents(),
     tasks: [],
     feed: [
@@ -41,7 +39,6 @@ export type Action =
   | { type: 'deleteAgent'; id: string }
   | { type: 'updateProvider'; provider: Provider }
   | { type: 'setRouting'; tier: Tier; providerId: string; modelId: string }
-  | { type: 'setMode'; mode: RunMode }
   | { type: 'jobStarted'; taskId: string; jobId: string }
   | { type: 'jobFailed'; taskId: string; error: string }
   | { type: 'retryTask'; id: string }
@@ -66,21 +63,6 @@ function feed(s: GameState, item: Omit<FeedItem, 'id' | 'at'>) {
 function say(s: GameState, agentId: string, text: string, ms = 3500, delay = 0) {
   s.bubbles = s.bubbles.filter((b) => b.agentId !== agentId);
   s.bubbles.push({ agentId, text, from: Date.now() + delay, until: Date.now() + delay + ms });
-}
-
-function spend(s: GameState, agent: Agent, task: Task, amount: number) {
-  const provider = s.providers.find((p) => p.id === agent.providerId);
-  if (!provider) return;
-  const model = provider.models.find((m) => m.id === task.model);
-  const tokens = Math.round(amount * 900 * (model?.weight ?? 1) * (0.7 + Math.random() * 0.6));
-  agent.stats.tokens += tokens;
-  const now = Date.now();
-  const last = provider.events[provider.events.length - 1];
-  // agrupa por minuto para não crescer infinitamente
-  if (last && now - last.at < 60_000) last.tokens += tokens;
-  else provider.events.push({ at: now, tokens });
-  const cutoff = now - 31 * 24 * 3600_000;
-  if (provider.events[0]?.at < cutoff) provider.events = provider.events.filter((e) => e.at >= cutoff);
 }
 
 /** Tokens REAIS (usage do Claude Code). A execução real sempre roda no Claude. */
@@ -127,8 +109,6 @@ function startNext(s: GameState, agent: Agent) {
 export const SCROLL_FLIGHT_MS = 2200;
 /** pergaminho voando do Maestro até o agente escolhido */
 export const SCROLL_HANDOFF_MS = 1600;
-/** quanto o Maestro "lê" na simulação */
-const READ_MS = 1500;
 
 const shortTitle = (t: string) => (t.length > 34 ? `${t.slice(0, 32)}…` : t);
 
@@ -163,25 +143,11 @@ function assign(s: GameState, task: Task, agent: Agent, c: Pick<Classification, 
   if (maestro) say(s, maestro.id, `${agent.name}, essa é sua! (${model?.label ?? '?'})`, 2800);
 }
 
+/** Quem lê o pergaminho é o Maestro de verdade (IA), disparado pelo realRunner; aqui só a fala de espera */
 function runMaestro(s: GameState) {
   const maestro = s.agents.find((a) => a.role === 'maestro');
-  const now = Date.now();
-  const pending = s.tasks.filter((t) => scrollArrived(t, now));
-  // na execução real quem lê o pergaminho é o Maestro de verdade (IA), disparado pelo realRunner
-  if (s.mode === 'real') return;
-  const task = pending[0];
-  if (task && !task.readingSince) startReading(s, task);
-  else if (task && now - task.readingSince! >= READ_MS) {
-    const r = triage(s, task);
-    if (!r.agent) {
-      task.readingSince = undefined;
-      feed(s, { kind: 'maestro', agentId: maestro?.id, text: `Ninguém disponível para "${task.title}". Crie um agente!` });
-    } else {
-      const why = r.classification.signals.length ? ` · sinais: ${r.classification.signals.map((x) => `"${x}"`).join(', ')}` : '';
-      assign(s, task, r.agent, r.classification, why);
-    }
-  }
-  if (maestro && !pending.length && Math.random() < 0.01) say(s, maestro.id, pick(MAESTRO_QUOTES));
+  const pending = s.tasks.some((t) => scrollArrived(t));
+  if (maestro && !pending && Math.random() < 0.01) say(s, maestro.id, pick(MAESTRO_QUOTES));
 }
 
 function sendToReview(s: GameState, dev: Agent, task: Task) {
@@ -211,16 +177,14 @@ function finish(s: GameState, task: Task, dev: Agent, qa?: Agent) {
   feed(s, { kind: 'done', agentId: dev.id, text: `✅ "${task.title}" concluída por ${dev.name}${task.bounces ? ` (voltou ${task.bounces}x)` : ''}` });
 }
 
-/** `verdict` vem do QA real; sem ele, a simulação sorteia pelo bugRate do dev */
+/** `verdict` é o veredito do QA (revisor de verdade) */
 function review(s: GameState, qa: Agent, task: Task, verdict?: Verdict) {
   const dev = s.agents.find((a) => a.id === task.assigneeId);
   if (!dev) {
     qa.currentTaskId = undefined;
     return finish(s, task, qa);
   }
-  const level = levelOf(dev.xp);
-  const chance = dev.bugRate * Math.max(0.4, 1 - (level - 1) * 0.06) * (task.bounces >= 2 ? 0.3 : 1);
-  const rejected = verdict ? !verdict.aprovado : Math.random() < chance;
+  const rejected = verdict ? !verdict.aprovado : false;
   if (rejected) {
     task.bounces++;
     task.status = 'in_progress';
@@ -347,20 +311,7 @@ function tick(s: GameState) {
       agent.currentTaskId = undefined;
       continue;
     }
-    // execução real: quem move a barra de vida é o Claude Code (eventos SSE)
-    if (s.mode === 'real' || task.jobId || task.blocked) continue;
-    const lvl = levelOf(agent.xp);
-    const dmg = agent.power * (0.6 + Math.random() * 0.8) * (1 + (lvl - 1) * 0.08);
-    task.hp = Math.max(0, task.hp - dmg);
-    spend(s, agent, task, dmg);
-
-    if (Math.random() < 0.03) {
-      const quotes = WORK_QUOTES[agent.role] ?? WORK_QUOTES.custom!;
-      say(s, agent.id, pick(quotes));
-    }
-
-    if (task.hp > 0) continue;
-    complete(s, agent, task);
+    // quem move a barra de vida é o Claude Code (eventos SSE do servidor)
   }
 
   const now = Date.now();
@@ -483,7 +434,7 @@ export function reducer(state: GameState, action: Action): GameState {
       const s = clone(state);
       const i = s.agents.findIndex((a) => a.id === action.agent.id);
       if (i >= 0) {
-        // só os campos editáveis: o resto (xp, fila, tarefa atual) segue vivo na simulação
+        // só os campos editáveis: o resto (xp, fila, tarefa atual) segue vivo na partida
         const { name, title, role, sprite, palette, providerId, instructions, keywords, power, bugRate } = action.agent;
         s.agents[i] = { ...s.agents[i], name, title, role, sprite, palette, providerId, instructions, keywords, power, bugRate };
       }
@@ -521,15 +472,6 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'setRouting': {
       const routing = { ...state.routing, [action.tier]: { ...state.routing[action.tier], [action.providerId]: action.modelId } };
       return { ...state, routing };
-    }
-    case 'setMode': {
-      const s = clone(state);
-      s.mode = action.mode;
-      feed(s, {
-        kind: 'system',
-        text: action.mode === 'real' ? '⚡ Execução real ligada: os agentes agora rodam o Claude Code no projeto alvo.' : '🎲 Voltando para a simulação.',
-      });
-      return s;
     }
     case 'jobStarted':
       return withTaskProject(state, action.taskId, (s) => {
@@ -660,7 +602,12 @@ export function loadState(): GameState {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const s = JSON.parse(raw) as GameState;
+      const s = JSON.parse(raw) as GameState & { mode?: string };
+      delete s.mode;
+      // sobras de versões antigas: tarefas de demonstração e simulação ficam para trás
+      const real = <T extends { source?: string }>(list: T[]) => list.filter((t) => (t.source as string) !== 'demo');
+      s.tasks = real(s.tasks ?? []);
+      for (const m of Object.values(s.matches ?? {})) m.tasks = real(m.tasks);
       if (s.agents && s.tasks && s.providers) {
         // partidas antigas: traz os agentes padrão que entraram depois (ex.: UI/UX)
         if ((s.rosterVersion ?? 1) < ROSTER_VERSION) {

@@ -2,7 +2,8 @@
  * Exporta os agentes do jogo como subagentes do Claude Code
  * (.claude/agents/<slug>.md) e atualiza a lista usada pela skill do Maestro.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface ExportAgent {
@@ -36,7 +37,8 @@ const slug = (s: string) =>
 
 const yaml = (s: string) => JSON.stringify(s);
 
-export async function exportAgents(root: string, agents: ExportAgent[]) {
+/** `root` = pasta do projeto que recebe os arquivos; `appRoot` = repositório do Agent Arena (de onde vem a skill) */
+export async function exportAgents(root: string, agents: ExportAgent[], appRoot?: string) {
   const dir = join(root, '.claude', 'agents');
   await mkdir(dir, { recursive: true });
   const written: string[] = [];
@@ -79,5 +81,11 @@ export async function exportAgents(root: string, agents: ExportAgent[]) {
     ].join('\n'),
   );
   written.push('.claude/skills/maestro-triage/roster.md');
+  // a skill do Maestro acompanha o elenco para o Claude Code do projeto decidir igual ao jogo
+  const skill = appRoot ? join(appRoot, '.claude', 'skills', 'maestro-triage', 'SKILL.md') : '';
+  if (skill && existsSync(skill)) {
+    await copyFile(skill, join(skillDir, 'SKILL.md'));
+    written.push('.claude/skills/maestro-triage/SKILL.md');
+  }
   return written;
 }

@@ -1,5 +1,5 @@
 import { TIER_LABEL, WINDOW_LABEL } from '../data/providers';
-import { isDetected, realUsage, simulatedUsage, type RealUsage } from '../engine/usage';
+import { isDetected, realUsage, arenaUsage, type RealUsage } from '../engine/usage';
 import type { GameState, Provider, Tier, WindowMode } from '../types';
 import { Bar, fmtDuration, fmtTokens, meterColor, Modal } from './ui';
 
@@ -38,8 +38,8 @@ interface Props {
 
 export function Accounts({ state, real, now, onClose, onUpdate, onRouting, onRefresh }: Props) {
   // na execução real só o Claude executa: os outros provedores ficam escondidos
-  const isReal = state.mode === 'real';
-  const providers = isReal ? state.providers.filter((p) => p.id === 'claude') : state.providers;
+  const isReal = true;
+  const providers = state.providers.filter((p) => p.id === 'claude');
   return (
     <Modal
       title="Contas & Tokens"
@@ -171,7 +171,7 @@ function ProviderCard({ p, real, now, onUpdate }: { p: Provider; real: RealUsage
       {p.shownModes.map((mode) => {
         const limit = p.limits[mode] ?? 0;
         const r = realUsage(real, p.id, mode, limit);
-        const sim = simulatedUsage(p, mode, now);
+        const sim = arenaUsage(p, mode, now);
         const realRatio = r ? r.pct ?? (limit ? r.total / limit : 0) : 0;
         return (
           <div key={mode} className="meter">
@@ -235,7 +235,7 @@ function ProviderCard({ p, real, now, onUpdate }: { p: Provider; real: RealUsage
 /** Claude: tudo lido da CLI (conta, plano, % real da sessão de 5h e da semana) */
 function ClaudeCard({ p, real, now }: { p: Provider; real: RealUsage; now: number }) {
   const acc = real.account!;
-  const sim = simulatedUsage(p, '5h', now);
+  const sim = arenaUsage(p, '5h', now);
   const method = acc.authMethod === 'claude.ai' ? 'assinatura Claude' : acc.authMethod === 'api_key' ? 'chave de API' : acc.authMethod;
   return (
     <div className="card provider">

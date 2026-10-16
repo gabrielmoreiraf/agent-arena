@@ -44,7 +44,6 @@ const SOURCE_LABEL: Record<Source, string> = {
   jira: 'jira',
   linear: 'linear',
   github: 'github',
-  demo: 'demo',
 };
 
 export function SourceBadge({ source }: { source: Source }) {

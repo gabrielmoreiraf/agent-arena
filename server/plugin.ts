@@ -13,6 +13,20 @@ function send(res: ServerResponse, status: number, data: unknown) {
   res.end(JSON.stringify(data));
 }
 
+const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
+
+/** Host e Origin (quando existir) precisam ser locais */
+function isLocalRequest(req: IncomingMessage) {
+  if (!LOCAL_HOST.test(String(req.headers.host ?? ''))) return false;
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try {
+    return LOCAL_HOST.test(new URL(String(origin)).host);
+  } catch {
+    return false;
+  }
+}
+
 async function body(req: IncomingMessage) {
   const chunks: Buffer[] = [];
   for await (const c of req) chunks.push(c as Buffer);
@@ -27,6 +41,8 @@ export function arenaApi(env: Record<string, string>, root: string): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         if (!req.url?.startsWith('/api/')) return next();
+        // a API executa comandos: só responde ao próprio computador (protege de páginas de terceiros / DNS rebinding)
+        if (!isLocalRequest(req)) return send(res, 403, { error: 'Acesso negado: o Agent Arena só aceita requisições locais (127.0.0.1).' });
         const url = new URL(req.url, 'http://localhost');
         try {
           if (url.pathname === '/api/usage') {
@@ -47,7 +63,8 @@ export function arenaApi(env: Record<string, string>, root: string): Plugin {
 
           if (url.pathname === '/api/agents/export' && req.method === 'POST') {
             const { agents } = await body(req);
-            return send(res, 200, { written: await exportAgents(root, agents ?? []) });
+            // grava no PROJETO escolhido (onde o Claude Code vai usar os subagentes), nunca dentro do Agent Arena
+            return send(res, 200, { written: await exportAgents(runner.projectDir(), agents ?? [], root) });
           }
 
           // ---- execução real (Claude Code headless) ----

@@ -665,8 +665,10 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .card.flow { display: block; line-height: 1.25; }
 
 /* ---------- boas-vindas ---------- */
-.welcome-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(3, 5, 10, 0.88); overflow-y: auto; padding: 20px 12px; display: flex; justify-content: center; align-items: flex-start; animation: fade 200ms; }
-.welcome { width: min(860px, 100%); padding: 22px 24px; display: grid; gap: 18px; background: var(--panel); }
+.welcome-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(3, 5, 10, 0.88); padding: clamp(6px, 2vw, 20px); display: flex; justify-content: center; align-items: center; animation: fade 200ms; }
+.welcome { width: min(860px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--panel); min-height: 0; }
+.welcome-body { flex: 1; min-height: 0; overflow-y: auto; padding: clamp(12px, 3vw, 24px); display: grid; gap: clamp(10px, 2vh, 18px); align-content: start; overscroll-behavior: contain; }
+.welcome-actions { flex: none; padding: 10px clamp(12px, 3vw, 24px) 12px; display: grid; gap: 6px; background: #0a0d18; box-shadow: 0 -2px 0 var(--line); }
 .welcome h1 { font-size: 15px; line-height: 1.4; color: var(--gold); margin: 6px 0; }
 .welcome h2 { font-size: 10px; color: var(--gold); margin: 0 0 8px; }
 .welcome .lead { font-size: 19px; line-height: 1.3; margin: 0; }
@@ -682,6 +684,50 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .welcome-support { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
 .welcome-support p { margin: 0 0 6px; font-size: 17px; line-height: 1.25; }
 .welcome-support .pix { background: #fff; padding: 6px; image-rendering: pixelated; box-shadow: 0 0 0 2px var(--gold-dim); }
-.welcome-foot { text-align: center; }
+.welcome-foot { text-align: left; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.welcome-foot .welcome-hide { margin: 0; }
 @media (max-width: 640px) { .welcome-modes, .welcome-support { grid-template-columns: 1fr; } .welcome-support .pix { justify-self: center; } }
 .welcome-hide { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 4px; font-size: 16px; }
+.empty-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; text-align: left; font-size: 17px; line-height: 1.25; max-width: 360px; }
+
+/* ---------- telas menores ---------- */
+@media (max-height: 760px), (max-width: 700px) {
+  .welcome h1 { font-size: 12px; }
+  .welcome .lead, .welcome-steps li, .welcome-tips, .welcome-support p { font-size: 15px; }
+  .welcome-crew svg { width: 30px; height: auto; }
+  .welcome-support .pix { width: 110px; height: 110px; }
+}
+@media (max-width: 700px) {
+  .welcome-steps li { grid-template-columns: 20px 1fr; }
+  .welcome-steps .ic { display: none; }
+  .welcome-cta .btn { flex: 1 1 140px; }
+}
+@media (max-width: 860px) {
+  /* a página inteira passa a rolar em vez de espremer as colunas */
+  html, body, #root { height: auto; min-height: 100%; }
+  .app { height: auto; min-height: 100vh; grid-template-rows: auto auto auto; }
+  .arena-wrap { min-height: 440px; }
+  .arena-wrap .arena.cr { max-width: 100%; min-height: 440px; }
+  .topbar { gap: 6px; }
+  .token-pills { width: 100%; }
+  .herobar { padding: 8px; }
+  .modal { max-width: 100%; }
+  .eco { min-height: 520px; }
+}
+@media (max-width: 520px) {
+  .btn { padding: 6px 8px; }
+  .cr-legend { display: none; }
+  .deliveries { grid-template-columns: 1fr; }
+}
+.app { grid-template-columns: minmax(0, 1fr); }
+.herobar { min-width: 0; max-width: 100%; }
+.main > * { min-width: 0; }
+.feed-item { min-width: 0; }
+.feed-item > div { min-width: 0; overflow-wrap: anywhere; }
+.col, .scroll { min-width: 0; }
+.topbar > * { max-width: 100%; }
+.btn-group { flex-wrap: wrap; }
+.topbar .spacer { display: none; }
+@media (min-width: 861px) { .topbar .spacer { display: block; } }
+.arena-tabs { flex-wrap: wrap; }
+@media (max-width: 860px) { .arena-tabs .spacer { flex-basis: 100%; height: 0; } }

@@ -1,6 +1,6 @@
 import { WINDOW_LABEL } from '../data/providers';
-import { realUsage, simulatedUsage, type RealUsage } from '../engine/usage';
-import type { GameState, RunMode } from '../types';
+import { realUsage, arenaUsage, type RealUsage } from '../engine/usage';
+import type { GameState } from '../types';
 import { Bar, clock, fmtTokens, meterColor } from './ui';
 
 interface Props {
@@ -11,7 +11,6 @@ interface Props {
   onScore: () => void;
   onAccounts: () => void;
   onIntegrations: () => void;
-  onMode: (m: RunMode) => void;
   onRealConfig: () => void;
   /** pasta alvo da execução real, para o tooltip */
   realTarget?: string;
@@ -20,7 +19,7 @@ interface Props {
   onAbout: () => void;
 }
 
-export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onIntegrations, onMode, onRealConfig, realTarget, realRunning, onStopAll, onAbout }: Props) {
+export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onIntegrations, onRealConfig, realTarget, realRunning, onStopAll, onAbout }: Props) {
   const done = state.tasks.filter((t) => t.status === 'done').length;
   const doing = state.tasks.filter((t) => t.status === 'in_progress' || t.status === 'review').length;
   const queued = state.tasks.filter((t) => t.status === 'backlog').length;
@@ -57,12 +56,12 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
 
       <div className="token-pills">
         {state.providers
-          .filter((p) => p.connected && (state.mode !== 'real' || p.id === 'claude'))
+          .filter((p) => p.connected)
           .map((p) => {
             const mode = p.shownModes[0] ?? '5h';
             const limit = p.limits[mode] ?? 0;
             const r = realUsage(real, p.id, mode, limit);
-            const used = r?.total ?? simulatedUsage(p, mode, now).total;
+            const used = r?.total ?? arenaUsage(p, mode, now).total;
             const ratio = r?.pct ?? (limit ? used / limit : 0);
             return (
               <button key={p.id} className="token-pill" onClick={onAccounts} title={r ? 'Uso real lido dos logs locais' : 'Uso simulado pela arena'}>
@@ -80,25 +79,17 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
           })}
       </div>
 
-      <div className="btn-group" role="group" aria-label="Modo de execução">
-        <button className={`btn sm ${state.mode === 'sim' ? 'on' : ''}`} onClick={() => onMode('sim')} title="Barra de vida simulada, sem gastar tokens">
-          🎲 Simulação
+      <div className="btn-group" role="group" aria-label="Execução">
+        <button className="btn sm" onClick={onRealConfig} title={realTarget ? `Projeto: ${realTarget}` : 'Configurar a execução dos agentes'}>
+          ⚙ Execução{realRunning ? ` (${realRunning} rodando)` : ''}
         </button>
-        <button
-          className={`btn sm ${state.mode === 'real' ? 'on' : ''}`}
-          onClick={() => onMode('real')}
-          title={realTarget ? `Claude Code de verdade em ${realTarget}` : 'Configure o projeto alvo'}
-        >
-          ⚡ Execução real{realRunning ? ` (${realRunning})` : ''}
-        </button>
-        <button className="btn sm ghost" onClick={onRealConfig} title="Configurar execução real" aria-label="Configurar execução real">⚙</button>
       </div>
 
       <div className="btn-group" role="group" aria-label="Velocidade">
         <button className={`btn sm ${state.speed === 0 ? 'on' : ''}`} onClick={() => onSpeed(0)} title="Pausar tudo (na execução real, congela os agentes onde estão)">❚❚</button>
         <button className={`btn sm ${state.speed === 1 ? 'on' : ''}`} onClick={() => onSpeed(1)} title="Normal">▶</button>
         <button className={`btn sm ${state.speed === 3 ? 'on' : ''}`} onClick={() => onSpeed(3)} title="Rápido">▶▶</button>
-        {(realRunning > 0 || state.mode === 'real') && (
+        {realRunning > 0 && (
           <button className="btn sm danger" onClick={onStopAll} title="Para todos os agentes agora (cancela o que estão fazendo)">⏹ Parar tudo</button>
         )}
       </div>

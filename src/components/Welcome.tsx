@@ -10,12 +10,7 @@ const STEPS = [
   { icon: '🚀', title: 'Você aplica a entrega', text: 'Cada tarefa fica numa branch isolada. Você revisa na aba Entregas e aplica no projeto com um clique.' },
 ];
 
-const MODES = [
-  { icon: '🎲', title: 'Simulação', text: 'Para conhecer o jogo. Nada é alterado e nenhum token é gasto.' },
-  { icon: '⚡', title: 'Execução real', text: 'O Claude Code roda de verdade, numa pasta de projeto sua, na sua máquina. Gasta tokens do seu plano.' },
-];
-
-export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; onClose: (dontShowAgain: boolean) => void; onDemo: () => void; hosted: boolean }) {
+export function Welcome({ agents, onClose }: { agents: Agent[]; onClose: (dontShowAgain: boolean) => void }) {
   const [hide, setHide] = useState(() => {
     try {
       return !!localStorage.getItem('agent-arena:welcome-hidden');
@@ -33,6 +28,7 @@ export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; 
   return (
     <div className="welcome-overlay" role="dialog" aria-modal aria-label="Bem-vindo ao Agent Arena">
       <div className="welcome px">
+        <div className="welcome-body">
         <header className="welcome-head">
           <div className="welcome-crew">
             {agents.slice(0, 8).map((a) => (
@@ -64,21 +60,12 @@ export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; 
         </section>
 
         <section>
-          <h2 className="px-title">Dois modos</h2>
-          <div className="welcome-modes">
-            {MODES.map((m) => (
-              <div key={m.title} className="card">
-                <b>{m.icon} {m.title}</b>
-                <span className="muted">{m.text}</span>
-              </div>
-            ))}
-          </div>
-          {hosted && (
-            <div className="hint card flow">
-              <b>Você está na versão hospedada:</b> aqui funciona a <b>Simulação</b>. Para a Execução real, rode o Agent Arena na sua máquina
-              (Claude Code instalado) e abra <code>http://127.0.0.1:5178</code>.
-            </div>
-          )}
+          <h2 className="px-title">Antes de começar</h2>
+          <ul className="welcome-tips">
+            <li><b>Tudo roda na sua máquina</b>: os agentes são CLIs de verdade (Claude Code, Codex, Gemini…) trabalhando numa pasta de projeto sua. Gasta tokens do seu plano.</li>
+            <li><b>Conecte só o que quiser</b>: em <b>Contas & Tokens</b> você conecta ou desconecta cada provedor e vê qual conta está logada. Quem não estiver conectado não recebe tarefas.</li>
+            <li><b>Escolha o projeto</b> (📁 na fila): crie uma pasta nova ou anexe uma existente. Cada tarefa roda numa branch isolada; nada muda no projeto até você aplicar.</li>
+          </ul>
         </section>
 
         <section>
@@ -90,11 +77,6 @@ export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; 
             <li><b>Placar</b> (tecla Tab): níveis, bugs achados e a rivalidade entre QA e devs.</li>
           </ul>
         </section>
-
-        <div className="welcome-cta">
-          <button className="btn gold" onClick={close}>Começar</button>
-          <button className="btn" onClick={() => { onDemo(); close(); }}>Explorar com tarefas de exemplo</button>
-        </div>
 
         <section className="welcome-support card">
           <img className="pix" src="/pix-qr.png" alt="QR Code Pix para apoiar o desenvolvedor" width={150} height={150} />
@@ -108,12 +90,20 @@ export function Welcome({ agents, onClose, onDemo, hosted }: { agents: Agent[]; 
           </div>
         </section>
 
+        </div>
+
+        <div className="welcome-actions">
+        <div className="welcome-cta">
+          <button className="btn gold" onClick={close}>Começar</button>
+        </div>
+
         <footer className="welcome-foot muted small">
           <label className="welcome-hide">
             <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> Não mostrar esta tela ao abrir
           </label>
           <div>Você pode reabri-la a qualquer momento pelo botão <b>?</b> no topo.</div>
         </footer>
+        </div>
       </div>
     </div>
   );

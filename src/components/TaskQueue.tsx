@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import type { RawTask } from '../data/seedTasks';
-import type { GameState } from '../types';
+import type { GameState, RawTask } from '../types';
 import { TaskCard } from './TaskCard';
 
 interface Props {
@@ -8,14 +7,13 @@ interface Props {
   onAdd: (tasks: RawTask[]) => void;
   onDelete: (id: string) => void;
   onRetry: (id: string) => void;
-  onDemo: () => void;
   onIntegrations: () => void;
   /** nome do projeto (pasta) onde as tarefas novas vão rodar */
   project?: string;
   onProjects: () => void;
 }
 
-export function TaskQueue({ state, onAdd, onDelete, onRetry, onDemo, onIntegrations, project, onProjects }: Props) {
+export function TaskQueue({ state, onAdd, onDelete, onRetry, onIntegrations, project, onProjects }: Props) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [showDesc, setShowDesc] = useState(false);
@@ -80,9 +78,6 @@ export function TaskQueue({ state, onAdd, onDelete, onRetry, onDemo, onIntegrati
           </button>
           <button className="btn ghost sm" onClick={() => setShowDesc((v) => !v)}>
             {showDesc ? '− detalhes' : '+ detalhes'}
-          </button>
-          <button className="btn ghost sm" onClick={onDemo} title="Carregar tarefas de exemplo">
-            demo
           </button>
         </div>
       </div>

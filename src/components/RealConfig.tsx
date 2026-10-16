@@ -15,12 +15,10 @@ interface Props {
   connected: boolean;
   onClose: () => void;
   onSaved: (s: RealStatus) => void;
-  onEnable: () => void;
-  enabled: boolean;
   onProjects: () => void;
 }
 
-export function RealConfig({ status, connected, onClose, onSaved, onEnable, enabled, onProjects }: Props) {
+export function RealConfig({ status, connected, onClose, onSaved, onProjects }: Props) {
   const cfg = status?.config;
   const [perm, setPerm] = useState<PermissionMode>(cfg?.permissionMode ?? 'acceptEdits');
   const [parallel, setParallel] = useState(cfg?.maxParallel ?? 1);
@@ -35,10 +33,8 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
       const s = await saveRealConfig({ permissionMode: perm, maxParallel: parallel, autoCommit });
       onSaved(s);
       if (!s.exists) setMsg('Erro: escolha um projeto (crie uma pasta nova ou anexe uma existente).');
-      else if (andEnable) {
-        onEnable();
-        onClose();
-      } else setMsg('Salvo.');
+      else if (andEnable) onClose();
+      else setMsg('Salvo.');
     } catch (e) {
       setMsg(`Erro: ${e instanceof Error ? e.message : e}`);
     } finally {
@@ -57,11 +53,6 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
       footer={
         <>
           <button className="btn ghost" disabled={busy} onClick={() => save(false)}>Salvar</button>
-          {!enabled && (
-            <button className="btn gold" disabled={busy || !cfg?.targetDir || !loggedIn} onClick={() => save(true)} title={loggedIn ? undefined : 'Faça login no Claude Code primeiro'}>
-              Salvar e ligar
-            </button>
-          )}
           <button className="btn" onClick={onClose}>Fechar</button>
         </>
       }
@@ -74,9 +65,8 @@ export function RealConfig({ status, connected, onClose, onSaved, onEnable, enab
 
       {status === null && (
         <div className="hint card flow">
-          <b>Servidor local não encontrado.</b> Esta é a versão hospedada (só o painel): a <b>Simulação</b> funciona normalmente, mas a
-          Execução real precisa rodar na sua máquina, onde ficam o Claude Code e as pastas dos projetos. Rode <code>npm run dev</code> no
-          repositório e abra <code>http://127.0.0.1:5178</code>.
+          <b>Servidor local não encontrado.</b> O Agent Arena roda na sua máquina: no repositório, rode <code>npm run dev</code> e abra{' '}
+          <code>http://127.0.0.1:5178</code>.
         </div>
       )}
 

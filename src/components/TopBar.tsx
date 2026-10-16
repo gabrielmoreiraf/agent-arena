@@ -17,9 +17,11 @@ interface Props {
   realRunning: number;
   onStopAll: () => void;
   onAbout: () => void;
+  music: { on: boolean; volume: number };
+  onMusic: (patch: Partial<{ on: boolean; volume: number }>) => void;
 }
 
-export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onIntegrations, onRealConfig, realTarget, realRunning, onStopAll, onAbout }: Props) {
+export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onIntegrations, onRealConfig, realTarget, realRunning, onStopAll, onAbout, music, onMusic }: Props) {
   const done = state.tasks.filter((t) => t.status === 'done').length;
   const doing = state.tasks.filter((t) => t.status === 'in_progress' || t.status === 'review').length;
   const queued = state.tasks.filter((t) => t.status === 'backlog').length;
@@ -83,6 +85,29 @@ export function TopBar({ state, real, now, onSpeed, onScore, onAccounts, onInteg
         <button className="btn sm" onClick={onRealConfig} title={realTarget ? `Projeto: ${realTarget}` : 'Configurar a execução dos agentes'}>
           ⚙ Execução{realRunning ? ` (${realRunning} rodando)` : ''}
         </button>
+      </div>
+
+      <div className="btn-group music" role="group" aria-label="Música">
+        <button
+          className={`btn sm ${music.on ? 'on' : ''}`}
+          onClick={() => onMusic({ on: !music.on })}
+          title={music.on ? 'Desligar a música de batalha' : 'Ligar a música de batalha'}
+          aria-pressed={music.on}
+        >
+          {music.on ? '🔊' : '🔇'} Música
+        </button>
+        {music.on && (
+          <input
+            className="vol"
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(music.volume * 100)}
+            onChange={(e) => onMusic({ volume: Number(e.target.value) / 100 })}
+            aria-label="Volume da música"
+            title={`Volume ${Math.round(music.volume * 100)}%`}
+          />
+        )}
       </div>
 
       <div className="btn-group" role="group" aria-label="Velocidade">

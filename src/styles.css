@@ -744,3 +744,5 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .conn-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .cmd { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
 .cmd code { flex: 1; min-width: 0; word-break: break-all; padding: 4px 6px; background: #070a12; }
+.btn-group.music { align-items: center; }
+.vol { width: 80px; accent-color: var(--gold); cursor: pointer; }

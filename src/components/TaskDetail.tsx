@@ -59,7 +59,7 @@ export function TaskDetail({
   const dev = state.agents.find((a) => a.id === task.assigneeId);
   const qa = state.agents.find((a) => a.id === task.reviewerId);
   const worker = task.status === 'review' ? qa : dev;
-  const provider = state.providers.find((p) => p.id === dev?.providerId);
+  const provider = state.providers.find((p) => p.id === (task.providerId ?? dev?.providerId));
   const model = provider?.models.find((p) => p.id === task.model);
   const max = task.status === 'review' ? 12 + task.complexity * 8 : task.effort;
   const hpPct = task.status === 'done' ? 0 : task.hp / Math.max(1, max);

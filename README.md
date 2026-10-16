@@ -49,9 +49,22 @@ Contribuir? Leia o [CONTRIBUTING.md](CONTRIBUTING.md). Segurança: [SECURITY.md]
 | **Integrações** | **Em breve**: ClickUp, Jira, Linear e GitHub Issues (o código de importação já existe em `server/integrations.ts`, mas a tela está desligada). |
 | **Agentes** | Clique num agente para editar nome, visual, cores, provedor, palavras-chave e **instruções próprias**. "+ Novo agente" recruta um personalizado. |
 
-## Conta e uso do Claude (real)
+## Contas de IA (conectar só o que quiser)
 
-A tela **Contas & Tokens** lê tudo direto do Claude Code, sem estimativas: `claude auth status` (e-mail, método, plano) e `claude -p /usage` (porcentagem real da sessão de 5h e da semana, com a hora do reset; não gasta tokens). O resultado fica em cache por 45s. Se o Claude Code não estiver logado, a Execução real fica bloqueada até você rodar `claude` e fazer login. Codex, Gemini e OpenRouter ainda não têm execução real: valem só na simulação, com limites estimados.
+**Contas & Tokens** mostra cada provedor com o estado real, lido das CLIs na sua máquina: *não instalado* (com o comando para instalar), *desconectado* ou *conectado* (com a conta logada). Cada um é opcional; agentes cujo provedor não está conectado usam um que esteja.
+
+| Provedor | Como conecta | Execução |
+|---|---|---|
+| **Claude Code** | `claude auth login` abre o navegador; o login roda como um terminal dentro do app. Mostra e-mail, plano e a % real da sessão de 5h e da semana (`claude auth status` e `/usage`, sem gastar tokens). | Testado de ponta a ponta |
+| **Gemini CLI** | Login Google no Terminal do macOS (`gemini`), chave de API (do Arena ou já configurada no Gemini CLI). | Dev testado de ponta a ponta; veredito do QA ainda não validado |
+| **Codex CLI** | `codex login` abre o navegador (precisa da CLI instalada). | **Experimental**: implementado pela documentação, ainda não testado |
+| **OpenRouter** | OAuth no navegador ou chave colada; roda o Claude Code apontado para o OpenRouter. | **Experimental**: ainda não testado |
+
+Credenciais do próprio Arena (chaves) ficam em `~/.agent-arena/credentials.json` com permissão 0600 e nunca vão para o navegador. Os modelos de cada peso (leve/médio/pesado) são editáveis na tabela; para Gemini, Codex e OpenRouter dá para digitar o id exato do modelo.
+
+## Música de batalha
+
+O botão **🔇 Música** no topo liga uma trilha chiptune estilo MOBA gerada no próprio navegador (sem arquivos de áudio): calma quando está tudo parado e épica, com bateria e melodia, quando há agentes trabalhando. Há controle de volume e a escolha fica salva.
 
 ## Uso real de tokens
 

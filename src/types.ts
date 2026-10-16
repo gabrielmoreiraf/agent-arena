@@ -93,6 +93,8 @@ export interface Task {
   discarded?: boolean;
   /** Execução real: processo do agente congelado */
   paused?: boolean;
+  /** Provedor que executa o dev desta tarefa */
+  providerId?: string;
   /** Pasta do projeto onde a tarefa roda (execução real) */
   projectDir?: string;
   /** Execução real: comentário do QA ao aprovar */
@@ -176,6 +178,8 @@ export interface GameState {
   routing: Record<Tier, Partial<Record<ProviderId, string>>>;
   /** versão do elenco padrão salvo (para trazer agentes novos em partidas antigas) */
   rosterVersion?: number;
+  /** versão da lista de modelos por provedor (para migrar partidas salvas) */
+  modelsVersion?: number;
   /** projeto (pasta) da partida aberta; cada projeto tem tarefas, registro e placar próprios */
   projectDir?: string;
   /** partidas dos outros projetos, guardadas até você voltar para eles */

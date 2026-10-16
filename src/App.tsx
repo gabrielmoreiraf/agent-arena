@@ -19,6 +19,7 @@ import { Scoreboard } from './components/Scoreboard';
 import { TaskQueue } from './components/TaskQueue';
 import { TopBar } from './components/TopBar';
 import { loadState, reducer, saveState } from './engine/game';
+import { useBattleMusic } from './audio/useBattleMusic';
 import { cancelJob, controlJobs, useRealRunner } from './engine/realRunner';
 import type { RealUsage } from './engine/usage';
 import type { Agent, RawTask } from './types';
@@ -130,6 +131,26 @@ export function App() {
     return () => clearInterval(id);
   }, [applyConns]);
 
+  // música de batalha (opcional): ligada/desligada e volume ficam salvos no navegador
+  const [music, setMusic] = useState<{ on: boolean; volume: number }>(() => {
+    try {
+      return { on: false, volume: 0.5, ...JSON.parse(localStorage.getItem('agent-arena:music') ?? '{}') };
+    } catch {
+      return { on: false, volume: 0.5 };
+    }
+  });
+  const updateMusic = (patch: Partial<{ on: boolean; volume: number }>) =>
+    setMusic((m) => {
+      const next = { ...m, ...patch };
+      try {
+        localStorage.setItem('agent-arena:music', JSON.stringify(next));
+      } catch {
+        /* sem storage: vale só nesta sessão */
+      }
+      return next;
+    });
+  useBattleMusic(music.on, music.volume, state.tasks.some((t) => t.jobId));
+
   const flash = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
@@ -189,6 +210,8 @@ export function App() {
         realTarget={runner.status?.config.targetDir}
         realRunning={state.tasks.filter((t) => t.jobId).length}
         onStopAll={stopAll}
+        music={music}
+        onMusic={updateMusic}
         onAbout={() => setWelcome(true)}
       />
 

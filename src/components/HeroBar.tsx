@@ -1,4 +1,5 @@
 import { levelOf, xpForLevel } from '../data/agents';
+import { providerFor } from '../data/providers';
 import type { GameState } from '../types';
 import { Avatar, Bar } from './ui';
 
@@ -18,7 +19,7 @@ export function HeroBar({ state, onAgent, onNew, onExport }: Props) {
         const hi = xpForLevel(lvl + 1);
         const task = state.tasks.find((t) => t.id === a.currentTaskId);
         // na execução real todo agente roda no Claude, qualquer que seja o provedor configurado nele
-        const provider = state.providers.find((p) => p.id === 'claude');
+        const provider = providerFor(state, a);
         const model = provider?.models.find((m) => m.id === task?.model);
         // custo em elixir: peso do modelo que o agente usa (Haiku 2, Sonnet 4, Opus 6 no Claude)
         const tier = task?.tier ?? { 'dev-junior': 'leve', 'dev-senior': 'pesado' }[a.role as string] ?? 'medio';

@@ -134,14 +134,26 @@ async function geminiStatus(): Promise<ConnectionStatus> {
   const base: ConnectionStatus = { id: 'gemini', installed: !!v, version: v, connected: false, installHint: INSTALL.gemini, methods: ['terminal', 'key'] };
   if (!v) return base;
   const creds = await readCreds();
+  // o Gemini CLI declara como está autenticado em ~/.gemini/settings.json (security.auth.selectedType)
+  let selected: string | undefined;
+  try {
+    selected = JSON.parse(readFileSync(join(HOME, '.gemini', 'settings.json'), 'utf8'))?.security?.auth?.selectedType;
+  } catch {
+    /* sem settings */
+  }
   let google: string | undefined;
   try {
     google = JSON.parse(readFileSync(join(HOME, '.gemini', 'google_accounts.json'), 'utf8')).active ?? undefined;
   } catch {
     /* sem login Google */
   }
-  if (google) return { ...base, connected: true, account: google, detail: 'login com Google' };
-  if (creds.gemini?.apiKey) return { ...base, connected: true, account: 'chave de API', detail: 'GEMINI_API_KEY guardada no Arena' };
+  const envKey = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  if (creds.gemini?.apiKey) return { ...base, connected: true, account: 'chave de API', detail: 'chave guardada no Agent Arena' };
+  if (selected === 'gemini-api-key' || envKey) return { ...base, connected: true, account: 'chave de API do Gemini', detail: 'configurada no Gemini CLI' };
+  if (selected === 'vertex-ai') return { ...base, connected: true, account: 'Vertex AI', detail: 'configurado no Gemini CLI' };
+  if (google || (selected === 'oauth-personal' && existsSync(join(HOME, '.gemini', 'oauth_creds.json')))) {
+    return { ...base, connected: true, account: google ?? 'conta Google', detail: 'login com Google' };
+  }
   return base;
 }
 

@@ -15,7 +15,7 @@ const SIZE = ['', 'P', 'M', 'G'];
 export function TaskCard({ task, state, onDelete, onRetry }: { task: Task; state: GameState; onDelete?: () => void; onRetry?: () => void }) {
   const agent: Agent | undefined = state.agents.find((a) => a.id === task.assigneeId);
   const reviewer = state.agents.find((a) => a.id === task.reviewerId);
-  const provider = state.providers.find((p) => p.id === agent?.providerId);
+  const provider = state.providers.find((p) => p.id === (task.providerId ?? agent?.providerId));
   const model = provider?.models.find((m) => m.id === task.model);
   const max = task.status === 'review' ? 12 + task.complexity * 8 : task.effort;
   const thinking = !task.assigneeId && task.status === 'backlog';

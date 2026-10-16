@@ -12,7 +12,9 @@
  *   input + output + cache criado).
  */
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { extractVerdict, otherCommand, parseOtherLine, type OtherProvider } from './adapters';
 import { claudeAccount } from './claudeAccount';
+import { storedKey, type ProviderKey } from './connections';
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { mkdir, symlink, writeFile } from 'node:fs/promises';
@@ -40,6 +42,8 @@ export interface RealConfig {
 
 export interface RunRequest {
   taskId: string;
+  /** quem executa: claude, openrouter (Claude Code apontado para o OpenRouter), gemini ou codex */
+  provider?: ProviderKey;
   /** pasta do projeto da tarefa (precisa estar em config.projects); vazio = projeto padrão */
   cwd?: string;
   phase: 'work' | 'review';
@@ -76,7 +80,7 @@ export type RealEvent =
   | { type: 'snapshot'; jobs: JobSummary[] }
   | { type: 'start'; job: JobSummary }
   | { type: 'step'; jobId: string; taskId: string; agentId: string; phase: RunRequest['phase']; progress: number; kind: 'tool' | 'text'; text: string }
-  | { type: 'tokens'; jobId: string; taskId: string; agentId: string; delta: number; total: number }
+  | { type: 'tokens'; jobId: string; taskId: string; agentId: string; delta: number; total: number; provider?: string }
   | { type: 'pause'; jobId: string; taskId: string; agentId: string; paused: boolean }
   | {
       type: 'end';
@@ -130,6 +134,10 @@ export interface LogLine {
 
 interface Job extends JobSummary {
   child?: ChildProcess;
+  provider: ProviderKey;
+  /** texto final do agente (CLIs sem evento "result") */
+  finalText: string;
+  sawError?: string;
   log: LogLine[];
   dir: string;
   projectDir: string;
@@ -457,6 +465,26 @@ export class Runner {
     });
     const dir = wt?.dir ?? projectDir;
 
+    // quem executa: Claude Code, Claude Code apontado para o OpenRouter, Gemini CLI ou Codex CLI
+    const provider: ProviderKey = req.provider ?? 'claude';
+    let bin = this.bin;
+    let args: string[];
+    let env: NodeJS.ProcessEnv = { ...process.env };
+    if (provider === 'gemini' || provider === 'codex') {
+      const { persona, prompt, review } = this.buildPrompt(req, wt);
+      const cmd = otherCommand({ provider: provider as OtherProvider, model: req.model, prompt, persona, review, dir, geminiKey: provider === 'gemini' ? await storedKey('gemini') : undefined });
+      bin = cmd.bin;
+      args = cmd.args;
+      env = { ...env, ...cmd.env };
+    } else {
+      args = this.buildArgs(req, wt);
+      if (provider === 'openrouter') {
+        const key = await storedKey('openrouter');
+        if (!key) throw new Error('OpenRouter não está conectado (Contas & Tokens).');
+        env = { ...env, ANTHROPIC_BASE_URL: 'https://openrouter.ai/api', ANTHROPIC_AUTH_TOKEN: key, ANTHROPIC_API_KEY: '' };
+      }
+    }
+
     const id = `job_${Date.now().toString(36)}_${(this.seq++).toString(36)}`;
     const job: Job = {
       id,
@@ -474,6 +502,8 @@ export class Runner {
       stderr: '',
       title: req.task.title,
       agentName: req.agent.name,
+      provider,
+      finalText: '',
       dir,
       projectDir,
       wt,
@@ -483,11 +513,10 @@ export class Runner {
     this.jobs.set(id, job);
     this.prune();
 
-    const args = this.buildArgs(req, wt);
-    const child = spawn(this.bin, args, { cwd: dir, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, args, { cwd: dir, env, stdio: ['ignore', 'pipe', 'pipe'] });
     job.child = child;
     this.emit({ type: 'start', job: summary(job) });
-    this.addLog(job, 'start', `▶ ${req.agent.name} (${req.model}) · ${req.phase === 'review' ? 'revisão' : 'trabalho'} · ${req.task.title}`);
+    this.addLog(job, 'start', `▶ ${req.agent.name} (${provider} · ${req.model}) · ${req.phase === 'review' ? 'revisão' : 'trabalho'} · ${req.task.title}`);
     this.addLog(job, 'out', `cwd: ${dir}${wt ? `  (branch ${wt.branch})` : ''}`);
 
     let resultMsg: Record<string, any> | null = null;
@@ -495,21 +524,37 @@ export class Runner {
     rl.on('line', (line) => {
       const msg = safeJson(line);
       if (!msg || typeof msg !== 'object') return;
-      if (msg.type === 'result') resultMsg = msg;
+      if (provider === 'gemini' || provider === 'codex') this.handleOther(job, provider as OtherProvider, msg);
+      else if (msg.type === 'result') resultMsg = msg;
       else this.handleMessage(job, msg, dir);
     });
     child.stderr!.on('data', (d) => (job.stderr = (job.stderr + d.toString()).slice(-4000)));
     child.on('error', (err) => {
       job.stderr += `\n${err.message}`;
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') job.stderr += `\nA CLI "${bin}" não está instalada nesta máquina.`;
     });
     child.on('close', (code) => {
       rl.close();
+      if (provider === 'gemini' || provider === 'codex') {
+        // essas CLIs não mandam um evento "result": monta um a partir do que foi lido
+        const ok = code === 0 && !(job.sawError && !job.finalText);
+        resultMsg = {
+          type: 'result',
+          subtype: ok ? 'success' : 'error',
+          is_error: !ok,
+          result: ok ? job.finalText : job.sawError || job.stderr.trim() || `${bin} saiu com código ${code}`,
+          usage: { input_tokens: job.tokens.input, output_tokens: job.tokens.output },
+          total_cost_usd: 0,
+          structured_output: req.phase === 'review' ? extractVerdict(job.finalText) ?? undefined : undefined,
+        };
+      }
       void this.finish(job, resultMsg, code);
     });
     return summary(job);
   }
 
-  private buildArgs(req: RunRequest, wt: Worktree | null) {
+  /** persona e prompt da rodada (iguais para qualquer provedor) */
+  private buildPrompt(req: RunRequest, wt: Worktree | null) {
     const agentSlug = slug(`${req.agent.title}-${req.agent.name}`) || 'arena-agent';
     const review = req.phase === 'review';
     const persona = [
@@ -551,7 +596,12 @@ export class Runner {
         ]
           .filter(Boolean)
           .join('\n\n');
+    return { agentSlug, persona, prompt, agents, review };
+  }
 
+  private buildArgs(req: RunRequest, wt: Worktree | null) {
+    const { agentSlug, prompt, agents, review } = this.buildPrompt(req, wt);
+    const t = req.task;
     const args = [
       '-p',
       prompt,
@@ -620,7 +670,7 @@ export class Runner {
     job.tokens.cacheCreate += t.cacheCreate;
     job.tokens.cacheRead += t.cacheRead;
     job.tokens.total += t.total;
-    this.emit({ type: 'tokens', jobId: job.id, taskId: job.taskId, agentId: job.agentId, delta: t.total, total: job.tokens.total });
+    this.emit({ type: 'tokens', jobId: job.id, taskId: job.taskId, agentId: job.agentId, delta: t.total, total: job.tokens.total, provider: job.provider === 'openrouter' ? 'openrouter' : job.provider });
   }
 
   private handleMessage(job: Job, msg: Record<string, any>, cwd: string) {
@@ -644,6 +694,26 @@ export class Runner {
     for (const c of m.content ?? []) {
       if (c.type === 'tool_use') this.bump(job, 'tool', describeTool(c.name, c.input ?? {}, cwd));
       else if (c.type === 'text' && c.text?.trim()) this.bump(job, 'text', short(c.text), c.text.trim().slice(0, 1500));
+    }
+  }
+
+  private handleOther(job: Job, provider: OtherProvider, msg: Record<string, any>) {
+    for (const st of parseOtherLine(provider, msg)) {
+      if (st.tool) this.bump(job, 'tool', st.tool);
+      if (st.out) this.addLog(job, 'out', st.out);
+      if (st.error) {
+        job.sawError = st.error;
+        this.addLog(job, 'error', st.error);
+      }
+      if (st.text) {
+        // Gemini manda o texto em pedaços; o Codex manda mensagens inteiras: junta tudo que o agente disse por último
+        job.finalText = provider === 'codex' ? st.text : `${job.finalText}${st.text}`;
+        this.bump(job, 'text', short(st.text), st.text.trim().slice(0, 1500));
+      }
+      if (st.tokens) {
+        const t = { input: st.tokens.input, output: st.tokens.output, cacheCreate: 0, cacheRead: 0, total: st.tokens.input + st.tokens.output };
+        this.addTokens(job, t);
+      }
     }
   }
 

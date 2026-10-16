@@ -1,5 +1,5 @@
 import { ROSTER_VERSION, defaultAgents, emptyStats, levelOf } from '../data/agents';
-import { defaultProviders, defaultRouting, modelFor } from '../data/providers';
+import { defaultProviders, defaultRouting, modelFor, providerFor } from '../data/providers';
 import { DEV_REPLY, MAESTRO_QUOTES, QA_APPROVE, QA_REJECT, pick } from '../data/quotes';
 import type { RealEvent, Verdict } from '../../server/runner';
 import type { TriageResult as AITriage } from '../../server/triage';
@@ -27,6 +27,7 @@ export function initialState(): GameState {
     startedAt: Date.now(),
     routing: defaultRouting(),
     rosterVersion: ROSTER_VERSION,
+    modelsVersion: 2,
   };
 }
 
@@ -67,10 +68,10 @@ function say(s: GameState, agentId: string, text: string, ms = 3500, delay = 0) 
 }
 
 /** Tokens REAIS (usage do Claude Code). A execução real sempre roda no Claude. */
-function spendReal(s: GameState, agent: Agent | undefined, task: Task | undefined, tokens: number) {
+function spendReal(s: GameState, agent: Agent | undefined, task: Task | undefined, tokens: number, providerId = 'claude') {
   if (agent) agent.stats.tokens = Math.max(0, agent.stats.tokens + tokens);
   if (task) task.realTokens = Math.max(0, (task.realTokens ?? 0) + tokens);
-  const provider = s.providers.find((p) => p.id === 'claude');
+  const provider = s.providers.find((p) => p.id === providerId);
   if (!provider || tokens <= 0) return;
   const now = Date.now();
   const last = provider.events[provider.events.length - 1];
@@ -126,7 +127,14 @@ function startReading(s: GameState, task: Task) {
 function assign(s: GameState, task: Task, agent: Agent, c: Pick<Classification, 'type' | 'complexity' | 'lane'>, why: string) {
   const maestro = s.agents.find((a) => a.role === 'maestro');
   const tier = tierOf(c.complexity, task.bounces);
-  const model = modelFor(s, agent.providerId, tier);
+  const prov = providerFor(s, agent);
+  if (!prov) {
+    task.readingSince = undefined;
+    feed(s, { kind: 'system', text: `⚠️ Nenhuma conta de IA conectada para "${task.title}". Conecte uma em Contas & Tokens.` });
+    return;
+  }
+  const model = modelFor(s, prov.id, tier);
+  task.providerId = prov.id;
   task.type = c.type;
   task.complexity = c.complexity;
   task.lane = c.lane;
@@ -135,7 +143,7 @@ function assign(s: GameState, task: Task, agent: Agent, c: Pick<Classification, 
   task.effort = effortFor(c.complexity);
   task.hp = task.effort;
   task.assigneeId = agent.id;
-  task.reason = reasonFor(c, agent.name, model?.label ?? '?', why);
+  task.reason = reasonFor(c, agent.name, `${prov.name} ${model?.label ?? '?'}`.trim(), why);
   task.laneT = 0.3 + Math.random() * 0.45;
   task.readingSince = undefined;
   task.assignedAt = Date.now();
@@ -248,7 +256,7 @@ function onReal(s: GameState, ev: RealEvent) {
   const task = s.tasks.find((t) => t.id === ev.taskId);
   const agent = s.agents.find((a) => a.id === ev.agentId);
   // só conta tarefas desta partida (outra aba/curl pode estar usando o mesmo servidor)
-  if (ev.type === 'tokens') return task && spendReal(s, agent, task, ev.delta);
+  if (ev.type === 'tokens') return task && spendReal(s, agent, task, ev.delta, ev.provider ?? 'claude');
   if (!task || task.jobId !== ev.jobId) return;
 
   if (ev.type === 'step') {
@@ -610,6 +618,13 @@ export function loadState(): GameState {
     if (raw) {
       const s = JSON.parse(raw) as GameState & { mode?: string };
       delete s.mode;
+      // modelos reais por provedor (v2): troca as listas e os ids de roteamento antigos
+      if ((s.modelsVersion ?? 1) < 2) {
+        const fresh = defaultProviders();
+        s.providers = (s.providers ?? []).map((p) => ({ ...(fresh.find((f) => f.id === p.id) ?? p), events: p.events ?? [], connected: false }));
+        s.routing = defaultRouting();
+        s.modelsVersion = 2;
+      }
       // sobras de versões antigas: tarefas de demonstração e simulação ficam para trás
       const real = <T extends { source?: string }>(list: T[]) => list.filter((t) => (t.source as string) !== 'demo');
       s.tasks = real(s.tasks ?? []);

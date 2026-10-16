@@ -6,8 +6,8 @@
  */
 import { useEffect, useRef, useState, type Dispatch } from 'react';
 import type { RealConfig, RealEvent, RunRequest } from '../../server/runner';
-import { modelFor } from '../data/providers';
-import type { Agent, GameState, Task } from '../types';
+import { modelFor, providerFor } from '../data/providers';
+import type { Agent, GameState, ProviderId, Task } from '../types';
 import { scrollArrived, type Action } from './game';
 
 export interface RealStatus {
@@ -56,20 +56,15 @@ export function cancelJob(jobId: string) {
   }).catch(() => undefined);
 }
 
-/** Execução real sempre roda no Claude: agentes de outro provedor usam o modelo Claude do mesmo peso */
-export function claudeModelFor(state: GameState, agent: Agent, task: Task) {
-  if (agent.providerId === 'claude' && task.model?.startsWith('claude')) return task.model;
-  return modelFor(state, 'claude', task.tier)?.id ?? 'sonnet';
-}
-
-function request(state: GameState, agent: Agent, task: Task): RunRequest {
+function request(state: GameState, agent: Agent, task: Task, provider: { id: string }): RunRequest {
   const phase = task.status === 'review' && task.reviewerId === agent.id ? 'review' : 'work';
   const dev = state.agents.find((a) => a.id === task.assigneeId);
   return {
     taskId: task.id,
     cwd: task.projectDir,
     phase,
-    model: claudeModelFor(state, agent, task),
+    provider: provider.id as RunRequest['provider'],
+    model: phase === 'work' && task.providerId === provider.id && task.model ? task.model : modelFor(state, provider.id as ProviderId, task.tier)?.id ?? '',
     agent: { id: agent.id, name: agent.name, role: agent.role, title: agent.title, instructions: agent.instructions },
     task: {
       title: task.title,
@@ -128,6 +123,8 @@ export function useRealRunner(state: GameState, dispatch: Dispatch<Action>, onJo
   // Maestro de verdade: lê um pergaminho por vez assim que ele chega na base
   useEffect(() => {
     if (state.speed === 0 || reading.current) return;
+    // sem nenhuma conta conectada o Maestro nem lê: o pergaminho espera
+    if (!state.providers.some((p) => p.connected)) return;
     const now = Date.now();
     // readingSince antigo = triagem que se perdeu num reload: lê de novo
     const task = state.tasks.find((t) => scrollArrived(t, now) && (!t.readingSince || now - t.readingSince > 120_000));
@@ -168,6 +165,9 @@ export function useRealRunner(state: GameState, dispatch: Dispatch<Action>, onJo
       if (agent.role === 'maestro' || !agent.currentTaskId) continue;
       const task = state.tasks.find((t) => t.id === agent.currentTaskId);
       if (!task || task.status === 'done' || task.jobId || task.blocked) continue;
+      // quem executa precisa estar conectado (o do agente, ou o Claude/outro que esteja)
+      const provider = providerFor(state, agent);
+      if (!provider) continue;
       const key = `${task.id}:${task.status}:${task.bounces}`;
       if (launching.current.has(key)) continue;
       launching.current.add(key);
@@ -175,7 +175,7 @@ export function useRealRunner(state: GameState, dispatch: Dispatch<Action>, onJo
       fetch('/api/real/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request(state, agent, task)),
+        body: JSON.stringify(request(state, agent, task, provider)),
       })
         .then(async (r) => {
           const data = await r.json();

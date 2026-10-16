@@ -119,11 +119,31 @@ export function Accounts({ state, real, now, onClose, onRouting, onRefresh, onCo
                     </td>
                     {connected.map((p) => (
                       <td key={p.id}>
-                        <select className="select" value={state.routing[tier][p.id] ?? ''} onChange={(e) => onRouting(tier, p.id, e.target.value)}>
-                          {p.models.map((m) => (
-                            <option key={m.id} value={m.id}>{m.label}</option>
-                          ))}
-                        </select>
+                        {p.id === 'claude' ? (
+                          <select className="select" value={state.routing[tier][p.id] ?? ''} onChange={(e) => onRouting(tier, p.id, e.target.value)}>
+                            {p.models.map((m) => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          // os modelos mudam com frequência: dá para digitar o id exato que a CLI/OpenRouter aceita
+                          <>
+                            <input
+                              className="input"
+                              list={`models-${p.id}`}
+                              key={state.routing[tier][p.id]}
+                              defaultValue={state.routing[tier][p.id] ?? ''}
+                              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                              onBlur={(e) => e.target.value.trim() && onRouting(tier, p.id, e.target.value.trim())}
+                              title="Id do modelo (ex.: gemini-2.5-pro)"
+                            />
+                            <datalist id={`models-${p.id}`}>
+                              {p.models.map((m) => (
+                                <option key={m.id} value={m.id}>{m.label}</option>
+                              ))}
+                            </datalist>
+                          </>
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -205,6 +225,7 @@ function ProviderCard({
           <div className="small muted">{p.models.map((m) => m.label).join(' · ')}</div>
         </div>
         <span className="spacer" />
+        {p.id !== 'claude' && <span className="status warn" title="Execução ainda pouco testada com este provedor">experimental</span>}
         <span className={`status ${statusClass}`}>{status}</span>
       </div>
 

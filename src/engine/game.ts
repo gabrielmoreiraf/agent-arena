@@ -603,7 +603,7 @@ export function reducer(state: GameState, action: Action): GameState {
       });
     case 'resetProject': {
       const s = clone(state);
-      unstash(s, undefined, state.projectDir?.split('/').pop() ?? 'novo');
+      unstash(s, undefined, state.projectDir?.split(/[\\/]/).pop() ?? 'novo');
       return s;
     }
     case 'reset':

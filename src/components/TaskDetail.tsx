@@ -94,7 +94,7 @@ export function TaskDetail({
         <span className="chip">{STATUS[task.status]}</span>
         {model && <span className="chip" style={{ color: provider?.color }}>{model.label} · {TIER_LABEL[task.tier]}</span>}
         {task.bounces > 0 && <span className="chip bad">🐞 voltou {task.bounces}x</span>}
-        {task.projectDir && <span className="chip" title={task.projectDir}>📁 {task.projectDir.split('/').pop()}</span>}
+        {task.projectDir && <span className="chip" title={task.projectDir}>📁 {task.projectDir.split(/[\\/]/).pop()}</span>}
         {task.worktree && !task.landedSha && !task.discarded && <span className="chip good" title={task.worktree.branch}>🌿 {task.worktree.branch}</span>}
         {task.paused && <span className="chip bad">⏸ pausada</span>}
         {!!task.realTokens && <span className="chip">{fmtTokens(task.realTokens)} tokens</span>}

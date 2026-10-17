@@ -14,6 +14,7 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { extractVerdict, otherCommand, parseOtherLine, type OtherProvider } from './adapters';
 import { claudeAccount } from './claudeAccount';
+import { winCmd } from './winbin';
 import { storedKey, type ProviderKey } from './connections';
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -368,8 +369,18 @@ export class Runner {
     return this.status();
   }
 
-  /** abre o seletor de pastas nativo (macOS) e devolve o caminho escolhido */
+  /** abre o seletor de pastas nativo (macOS ou Windows) e devolve o caminho escolhido */
   pickFolder(): Promise<string | null> {
+    if (process.platform === 'win32') {
+      const script =
+        'Add-Type -AssemblyName System.Windows.Forms; [Console]::OutputEncoding=[Text.Encoding]::UTF8; ' +
+        '$f=New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description="Escolha a pasta do projeto para o Agent Arena"; ' +
+        '$f.ShowNewFolderButton=$true; $o=New-Object System.Windows.Forms.Form; $o.TopMost=$true; ' +
+        'if($f.ShowDialog($o) -eq "OK"){ Write-Output $f.SelectedPath }';
+      return new Promise((res) =>
+        execFile('powershell.exe', ['-NoProfile', '-STA', '-Command', script], { timeout: 5 * 60_000 }, (err, out) => res(err ? null : out.trim() || null)),
+      );
+    }
     if (process.platform !== 'darwin') return Promise.resolve(null);
     return new Promise((res) =>
       execFile(
@@ -513,7 +524,8 @@ export class Runner {
     this.jobs.set(id, job);
     this.prune();
 
-    const child = spawn(bin, args, { cwd: dir, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const exe = winCmd(bin, args);
+    const child = spawn(exe.bin, exe.args, { cwd: dir, env, stdio: ['ignore', 'pipe', 'pipe'] });
     job.child = child;
     this.emit({ type: 'start', job: summary(job) });
     this.addLog(job, 'start', `▶ ${req.agent.name} (${provider} · ${req.model}) · ${req.phase === 'review' ? 'revisão' : 'trabalho'} · ${req.task.title}`);
@@ -1081,7 +1093,7 @@ function summary(j: Job): JobSummary {
 }
 
 function expand(raw: string) {
-  const t = raw.trim().replace(/^~(?=$|\/)/, homedir());
+  const t = raw.trim().replace(/^~(?=$|[\\/])/, homedir());
   return t ? resolve(t) : '';
 }
 

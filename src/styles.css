@@ -129,6 +129,20 @@ label.field > span { font-family: var(--font-px); font-size: 8px; color: var(--m
   padding: 10px;
   min-width: 0;
 }
+/* registro de batalha em cima, papo dos agentes embaixo */
+.side-stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-height: 0; min-width: 0; }
+.chat-scroll { display: grid; align-content: start; gap: 8px; }
+.chat-msg { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; }
+.chat-who { font-size: 14px; display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
+.chat-who time { margin-left: auto; font-size: 12px; color: var(--muted); }
+.chat-bubble { position: relative; margin-top: 3px; padding: 5px 8px; background: #f4f1ea; color: #14182b; font-size: 16px; line-height: 1.1; box-shadow: 0 0 0 2px #000; }
+.chat-bubble::before { content: ''; position: absolute; left: -6px; top: 6px; width: 8px; height: 8px; background: inherit; transform: rotate(45deg); box-shadow: -2px 2px 0 #000; }
+.chat-msg.qa .chat-bubble { background: #ffe1df; }
+.chat-msg.maestro .chat-bubble { background: #e8dcff; }
+.chat-msg.monster .chat-bubble { background: #dff7d9; }
+.chat-ava { width: 28px; height: 28px; display: grid; place-items: center; background: #070a12; box-shadow: 0 0 0 2px var(--line); }
+.chat-msg.new .chat-bubble { animation: pop-in 0.25s steps(3); }
+@keyframes pop-in { from { transform: scale(0.85); opacity: 0.4; } }
 .main {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr) 320px;
@@ -137,12 +151,12 @@ label.field > span { font-family: var(--font-px); font-size: 8px; color: var(--m
 }
 @media (max-width: 1200px) {
   .main { grid-template-columns: 260px minmax(0, 1fr); }
-  .col.feed-col { display: none; }
+  .side-stack { display: none; }
 }
 @media (max-width: 860px) {
   .main { grid-template-columns: 1fr; }
   .queue-col { max-height: 320px; }
-  .col.feed-col { display: flex; max-height: 320px; }
+  .side-stack { display: grid; max-height: 640px; }
 }
 
 /* ---------- topbar ---------- */
@@ -546,6 +560,84 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 @media (prefers-reduced-motion: reduce) {
   .scroll-fx.fly, .scroll-fx.pile, .scroll-fx.reading, .unit.reading .sprite, .monster.spawn .sprite { animation-duration: 1ms; animation-iteration-count: 1; }
 }
+
+/* ---------- golpes ---------- */
+.atk, .atk-hit { position: absolute; pointer-events: none; animation-timing-function: steps(14); animation-iteration-count: infinite; }
+.atk { z-index: 9; filter: drop-shadow(0 0 4px var(--glow)); animation-name: atk-fly; opacity: 0; }
+.atk svg { display: block; }
+.atk-hit {
+  z-index: 10; transform: translate(-50%, -50%) scale(0); opacity: 0; animation-name: atk-hit;
+  background: radial-gradient(circle, #fff 0 12%, var(--glow) 13% 38%, transparent 62%);
+}
+@keyframes atk-fly {
+  0% { left: var(--x0); top: var(--y0); opacity: 0; transform: translate(-50%, -50%) rotate(0deg) scale(0.5); }
+  8% { opacity: 1; }
+  45% { transform: translate(-50%, calc(-50% - var(--arc))) rotate(calc(var(--spin) / 2)) scale(1); }
+  80% { left: var(--x1); top: var(--y1); opacity: 1; transform: translate(-50%, -50%) rotate(var(--spin)) scale(1); }
+  81%, 100% { left: var(--x1); top: var(--y1); opacity: 0; transform: translate(-50%, -50%) rotate(var(--spin)) scale(1); }
+}
+@keyframes atk-hit {
+  0%, 79% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  82% { opacity: 1; transform: translate(-50%, -50%) scale(0.7); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+/* monstro maior aguenta e reage: G balança o chão */
+.monster.c2.hit .sprite { animation-duration: 0.35s; }
+.monster.c3.hit .sprite { animation: boss-hit 0.5s steps(3) infinite; }
+.monster.c3::after, .monster.c2::after {
+  content: ''; position: absolute; left: 50%; bottom: 8px; width: 40px; height: 14px; border-radius: 50%;
+  transform: translateX(-50%) scale(0); border: 2px solid rgba(255, 120, 100, 0.7); pointer-events: none; opacity: 0;
+}
+.monster.c3.hit::after { animation: shock 1.2s steps(6) infinite; }
+.monster.c2.hit::after { animation: shock 2s steps(6) infinite; border-color: rgba(255, 209, 102, 0.6); }
+@keyframes boss-hit { 33% { transform: translate(-3px, 1px) scaleY(0.94); filter: brightness(1.8) drop-shadow(0 3px 0 rgba(0,0,0,.4)); } 66% { transform: translate(3px, 0); } }
+@keyframes shock { 0% { opacity: 0.9; transform: translateX(-50%) scale(0.3); } 100% { opacity: 0; transform: translateX(-50%) scale(3); } }
+@media (prefers-reduced-motion: reduce) {
+  .atk, .atk-hit, .monster.c2::after, .monster.c3::after { display: none; }
+}
+
+/* ---------- ao vivo ---------- */
+.live { padding: 12px; overflow: auto; height: 100%; display: grid; align-content: start; gap: 12px; }
+.live-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.live-head code { background: #070a12; padding: 0 4px; }
+.live-badge { font-size: 14px; padding: 2px 8px; background: #070a12; box-shadow: 0 0 0 2px var(--line); white-space: nowrap; }
+.live-badge.on { box-shadow: 0 0 0 2px var(--green); color: var(--green); }
+.live-badge.off { box-shadow: 0 0 0 2px var(--red); color: var(--red); }
+.live-empty { padding: 14px; }
+.live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; align-items: start; }
+.live-card { padding: 10px; display: grid; gap: 8px; }
+.live-card.idle { opacity: 0.8; }
+.live-card header { display: flex; align-items: center; gap: 8px; }
+.live-card .grow, .live-worker .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.live-title { font-size: 16px; color: var(--gold); }
+.live-prompt { opacity: 0.8; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.live-worker { background: var(--panel-2); box-shadow: 0 0 0 2px var(--line); padding: 6px 8px; display: grid; gap: 4px; }
+.live-worker.working { box-shadow: 0 0 0 2px var(--green); }
+.live-worker-head { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 15px; }
+.live-doing { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.live-doing.idle { opacity: 0.7; }
+.live-recent { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 14px; }
+.live-recent li { display: flex; align-items: center; gap: 6px; }
+.live-ico { display: inline-grid; place-items: center; flex: none; }
+.live-ico.on svg { animation: live-hit 0.7s steps(3) infinite; }
+@keyframes live-hit { 33% { transform: translate(2px, -2px) rotate(8deg); } 66% { transform: translate(-2px, 1px) rotate(-6deg); } }
+.dot { display: inline-block; width: 8px; height: 8px; flex: none; background: #667; }
+.dot.working { background: var(--green); animation: live-blink 1s steps(2) infinite; }
+.dot.idle { background: #667; }
+@media (prefers-reduced-motion: reduce) { .live-ico.on svg, .dot.working { animation: none; } }
+
+.live-pick { display: grid; gap: 8px; margin-top: 8px; }
+.live-pick-row { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; cursor: pointer; text-align: left; padding: 8px; background: #070a12; box-shadow: 0 0 0 2px var(--line); font-size: 16px; color: inherit; }
+.live-pick-row:hover { box-shadow: 0 0 0 2px var(--gold); }
+.live-pick-row.working { box-shadow: 0 0 0 2px var(--green); }
+.live-pick-row .grow { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.live-pick-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-history { max-height: 55vh; overflow: auto; }
+.live-history li.k-say { opacity: 0.85; font-style: italic; }
+.live-history li.k-user { color: var(--gold); }
+.live-banner { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; max-width: 88%; padding: 4px 10px; background: rgba(8, 12, 22, 0.92); box-shadow: 0 0 0 2px var(--green); font-size: 15px; }
+.live-banner.ended { box-shadow: 0 0 0 2px var(--gold); }
+.live-banner .grow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- projetos ---------- */
 .project-pick {

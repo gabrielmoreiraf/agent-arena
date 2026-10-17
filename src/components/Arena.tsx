@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { levelOf } from '../data/agents';
 import { SCROLL_FLIGHT_MS, SCROLL_HANDOFF_MS } from '../engine/game';
+import { ATTACK_SCALE, HITS_PER_CYCLE, MONSTER_SIZE, attackFor } from '../sprites/attacks';
 import { MONSTERS, MONSTER_BY_TYPE, MONSTER_INFO } from '../sprites/monsters';
 import { PixelSprite } from '../sprites/PixelSprite';
 import type { Agent, GameState, Lane, Task } from '../types';
@@ -135,9 +136,15 @@ interface Props {
   onControl?: (action: 'pause' | 'resume' | 'stop', agentId: string) => void;
   /** abre os detalhes de uma tarefa (monstro) */
   onTask?: (taskId: string) => void;
+  /** já tem alguma conta de IA conectada */
+  connected?: boolean;
+  /** já tem um projeto escolhido */
+  hasProject?: boolean;
+  /** modo ao vivo: faixa no topo com a sessão espelhada */
+  banner?: React.ReactNode;
 }
 
-export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elixirLabel, onControl, onTask }: Props) {
+export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elixirLabel, onControl, onTask, banner, connected = false, hasProject = false }: Props) {
   const now = Date.now();
   const handingOff = (t: Task) => !!t.assignedAt && now - t.assignedAt < SCROLL_HANDOFF_MS;
   const sideOf = (t: Task) => SIDE_OF[t.lane ?? 'mid'];
@@ -226,6 +233,7 @@ export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elix
 
   return (
     <div className="arena cr">
+      {banner}
       {/* ---- cenário ---- */}
       <div className="cr-half cr-enemy" />
       <div className="cr-half cr-ours" />
@@ -332,12 +340,12 @@ export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elix
         const [x, y] = monsterPos.get(task.id) ?? [LANE_X.L, FIGHT_Y[0]];
         const m = MONSTERS[MONSTER_BY_TYPE[task.type] ?? 'slime'];
         const queued = task.status === 'backlog';
-        const size = queued ? 18 : 20 + task.complexity * 6;
+        const size = queued ? 14 + task.complexity * 5 : MONSTER_SIZE[task.complexity];
         const max = task.status === 'review' ? 12 + task.complexity * 8 : task.effort;
         return (
           <div
             key={task.id}
-            className={`monster ${busyIds.has(task.id) ? 'hit' : ''} ${task.status === 'review' ? 'review' : ''} ${queued ? 'queued' : ''} ${
+            className={`monster c${task.complexity} ${busyIds.has(task.id) && !task.paused ? 'hit' : ''} ${task.status === 'review' ? 'review' : ''} ${queued ? 'queued' : ''} ${
               task.assignedAt && now - task.assignedAt < SCROLL_HANDOFF_MS + 1500 ? 'spawn' : ''
             }`}
             style={{ left: `${x}%`, top: `${y}%`, zIndex: queued ? 1 : 2 }}
@@ -355,6 +363,40 @@ export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elix
           </div>
         );
       })}
+
+      {/* ---- golpes: cada agente ataca o monstro com o que está fazendo (tipo da tarefa); tarefa maior, mais e mais pesados golpes ---- */}
+      {onMap
+        .filter((t) => t.status !== 'backlog' && busyIds.has(t.id) && !t.paused)
+        .map((task) => {
+          const agent = state.agents.find((a) => a.currentTaskId === task.id);
+          const a = agent && unitPos.get(agent.id);
+          const m = monsterPos.get(task.id);
+          if (!a || !m) return null;
+          const atk = attackFor(task);
+          const hits = HITS_PER_CYCLE[task.complexity];
+          const px = atk.size * ATTACK_SCALE[task.complexity];
+          return Array.from({ length: hits }, (_, i) => {
+            const vars = {
+              '--x0': `${a[0]}%`,
+              '--y0': `${a[1] - 3}%`,
+              '--x1': `${m[0]}%`,
+              '--y1': `${m[1] - 3.5}%`,
+              '--arc': `${atk.arc * ATTACK_SCALE[task.complexity]}px`,
+              '--spin': `${atk.spin}deg`,
+              '--glow': atk.glow,
+              animationDuration: `${atk.ms}ms`,
+              animationDelay: `${-(i * atk.ms) / hits}ms`,
+            } as React.CSSProperties;
+            return (
+              <span key={`atk-${task.id}-${i}`}>
+                <span className="atk" style={vars} title={atk.name}>
+                  <PixelSprite rows={atk.rows} palette={atk.palette} size={px} />
+                </span>
+                <span className="atk-hit" style={{ ...vars, left: `${m[0]}%`, top: `${m[1] - 3.5}%`, width: px * 1.5, height: px * 1.5 }} />
+              </span>
+            );
+          });
+        })}
 
       {/* ---- agentes ---- */}
       {state.agents.map((agent: Agent) => {
@@ -429,15 +471,21 @@ export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elix
         <div className="arena-empty">
           <div className="px">
             <div className="px-title">Arena vazia</div>
-            <ol className="empty-steps">
-              <li><b>Conecte uma conta</b> de IA (Claude, Codex, Gemini ou OpenRouter): só as que você quiser.</li>
-              <li><b>Escolha o projeto</b>: crie uma pasta nova ou anexe uma que já existe.</li>
-              <li><b>Escreva uma tarefa</b> na fila, ao lado.</li>
-            </ol>
-            <div className="btn-group">
-              <button className="btn gold" onClick={onAccounts}>1 · Contas</button>
-              <button className="btn gold" onClick={onProjects}>2 · Projeto</button>
-            </div>
+            {connected && hasProject ? (
+              <div className="hint">Tudo pronto. <b>Escreva uma tarefa</b> na fila, ao lado, e envie ao Maestro: ela vira um pergaminho e os agentes entram em ação.</div>
+            ) : (
+              <>
+                <ol className="empty-steps">
+                  {!connected && <li><b>Conecte uma conta</b> de IA (Claude, Codex, Gemini ou OpenRouter): só as que você quiser.</li>}
+                  {!hasProject && <li><b>Escolha o projeto</b>: crie uma pasta nova ou anexe uma que já existe.</li>}
+                  <li><b>Escreva uma tarefa</b> na fila, ao lado.</li>
+                </ol>
+                <div className="btn-group">
+                  {!connected && <button className="btn gold" onClick={onAccounts}>Conectar conta</button>}
+                  {!hasProject && <button className="btn gold" onClick={onProjects}>Escolher projeto</button>}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

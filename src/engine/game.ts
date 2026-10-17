@@ -1,6 +1,6 @@
 import { ROSTER_VERSION, defaultAgents, emptyStats, levelOf } from '../data/agents';
 import { defaultProviders, defaultRouting, modelFor, providerFor } from '../data/providers';
-import { DEV_REPLY, MAESTRO_QUOTES, QA_APPROVE, QA_REJECT, pick } from '../data/quotes';
+import { MONSTER_NAME, approveLine, maestroLine, rejectLine, replyLine, spawnLine, stanceFor, thread, workLine, type Turn, type Who } from '../data/quotes';
 import type { RealEvent, Verdict } from '../../server/runner';
 import type { TriageResult as AITriage } from '../../server/triage';
 import type { Agent, FeedItem, GameState, ProjectMatch, Provider, RawTask, Task, Tier } from '../types';
@@ -62,9 +62,65 @@ function feed(s: GameState, item: Omit<FeedItem, 'id' | 'at'>) {
   s.feed = [{ ...item, id: uid('f'), at: Date.now() }, ...s.feed].slice(0, FEED_MAX);
 }
 
-function say(s: GameState, agentId: string, text: string, ms = 3500, delay = 0) {
-  s.bubbles = s.bubbles.filter((b) => b.agentId !== agentId);
-  s.bubbles.push({ agentId, text, from: Date.now() + delay, until: Date.now() + delay + ms });
+const CHAT_MAX = 120;
+
+/** balão de fala; por padrão a fala também vai para o papo dos agentes (toId = com quem fala) */
+function say(s: GameState, agentId: string, text: string, ms = 3500, delay = 0, chat: { toId?: string; monster?: string } | false = {}) {
+  // o monstro só fala no papo dos agentes: sem balão na arena
+  if (!agentId.startsWith('m:')) {
+    s.bubbles = s.bubbles.filter((b) => b.agentId !== agentId);
+    s.bubbles.push({ agentId, text, from: Date.now() + delay, until: Date.now() + delay + ms });
+  }
+  if (chat) s.chat = [...(s.chat ?? []), { id: uid('c'), at: Date.now() + delay, agentId, toId: chat.toId, monster: chat.monster, text }].slice(-CHAT_MAX);
+}
+
+/** toca uma conversa: cada fala sai em seguida da outra, endereçada a quem falou antes */
+function play(s: GameState, ids: string[], turns: Turn[], o: { gap?: number; delay?: number; monster?: string } = {}) {
+  turns.forEach((t, i) => {
+    const speaker = ids[t.who];
+    if (!speaker) return;
+    const to = i === 0 ? ids[1] : ids[turns[i - 1].who];
+    say(s, speaker, t.text, 4200, (o.delay ?? 0) + i * (o.gap ?? 2700), { toId: to, monster: o.monster });
+  });
+}
+
+const monsterWho = (type: string): Who => ({ name: MONSTER_NAME[type] ?? 'Monstro', role: 'custom', providerId: '' });
+
+/** a plateia: quem não está trabalhando torce, critica ou cobra, e a conversa segue com a resposta de quem trabalha */
+function spectate(s: GameState) {
+  if (Math.random() > 0.09) return;
+  const busy = s.agents.filter((a) => a.role !== 'maestro' && s.tasks.some((t) => t.id === a.currentTaskId && t.status !== 'done'));
+  if (!busy.length) return;
+  const worker = busy[Math.floor(Math.random() * busy.length)];
+  const task = s.tasks.find((t) => t.id === worker.currentTaskId)!;
+  // quem também está lutando só entra na plateia de vez em quando
+  const crowd = s.agents.filter((a) => a.id !== worker.id && !(a.currentTaskId && a.role !== 'maestro' && Math.random() < 0.5));
+  if (!crowd.length) return;
+  const first = crowd[Math.floor(Math.random() * crowd.length)];
+  const second = crowd.filter((a) => a.id !== first.id)[0];
+  const stance = stanceFor(first.role);
+  play(s, [first.id, worker.id, second?.id ?? ''], thread(stance, { a: first, b: worker, c: second, type: task.type }));
+}
+
+/** o monstro que está apanhando provoca o agente (ou geme quando está quase no fim) e os dois trocam golpes de palavra */
+function monsterTalk(s: GameState) {
+  if (Math.random() > 0.12) return;
+  const fighting = s.tasks.filter((t) => t.status === 'in_progress' && s.agents.some((a) => a.id === t.assigneeId && a.currentTaskId === t.id));
+  if (!fighting.length) return;
+  const t = fighting[Math.floor(Math.random() * fighting.length)];
+  const agent = s.agents.find((a) => a.id === t.assigneeId)!;
+  const hurt = t.hp / Math.max(1, t.effort) < 0.35;
+  play(s, [`m:${t.id}`, agent.id], thread(hurt ? 'hurt' : 'monster', { a: monsterWho(t.type), b: agent, type: t.type }), { monster: t.type });
+}
+
+/** de vez em quando dois agentes puxam papo: farpa com revide, ou desabafo de trabalho com resposta */
+function chatter(s: GameState) {
+  if (s.agents.length < 2 || Math.random() > 0.05) return;
+  const a = s.agents[Math.floor(Math.random() * s.agents.length)];
+  const others = s.agents.filter((x) => x.id !== a.id);
+  const b = others[Math.floor(Math.random() * others.length)];
+  const task = s.tasks.find((t) => t.id === a.currentTaskId) ?? s.tasks.find((t) => t.id === b.currentTaskId);
+  play(s, [a.id, b.id], thread(Math.random() < 0.55 ? 'farpa' : 'work', { a, b, type: task?.type }));
 }
 
 /** Tokens REAIS (usage do Claude Code). A execução real sempre roda no Claude. */
@@ -102,7 +158,11 @@ function startNext(s: GameState, agent: Agent) {
     agent.currentTaskId = id;
     if (task.status === 'backlog') {
       task.status = 'in_progress';
-      if (task.assignedAt && !task.bounces) say(s, agent.id, pick(['📜 Deixa comigo!', '📜 Recebido, Maestro!', '📜 Bora!']), 2200);
+      if (task.assignedAt && !task.bounces) {
+        say(s, agent.id, spawnLine(), 2200);
+        // o monstro aparece e já provoca quem vai enfrentá-lo
+        play(s, [`m:${task.id}`, agent.id], thread('monster', { a: monsterWho(task.type), b: agent, type: task.type }), { delay: 2600, monster: task.type });
+      }
     }
   }
 }
@@ -156,7 +216,7 @@ function assign(s: GameState, task: Task, agent: Agent, c: Pick<Classification, 
 function runMaestro(s: GameState) {
   const maestro = s.agents.find((a) => a.role === 'maestro');
   const pending = s.tasks.some((t) => scrollArrived(t));
-  if (maestro && !pending && Math.random() < 0.01) say(s, maestro.id, pick(MAESTRO_QUOTES));
+  if (maestro && !pending && Math.random() < 0.01) say(s, maestro.id, maestroLine());
 }
 
 function sendToReview(s: GameState, dev: Agent, task: Task) {
@@ -212,17 +272,17 @@ function review(s: GameState, qa: Agent, task: Task, verdict?: Verdict) {
     qa.stats.bugsFound++;
     qa.currentTaskId = undefined;
     gainXp(s, qa, 15);
-    const jab = verdict?.comentario || pick(QA_REJECT);
-    const reply = pick(DEV_REPLY);
+    const jab = verdict?.comentario || rejectLine();
+    const reply = replyLine();
     if (verdict) task.lastReview = verdict.comentario;
-    say(s, qa.id, verdict ? pick(QA_REJECT) : jab, 4000);
-    say(s, dev.id, reply, 4000, 900);
+    say(s, qa.id, verdict ? rejectLine() : jab, 4000, 0, { toId: dev.id });
+    say(s, dev.id, reply, 4000, 900, { toId: qa.id });
     feed(s, { kind: 'qa', agentId: qa.id, text: `🐞 ${qa.name} devolveu "${task.title}": "${jab}"` });
     feed(s, { kind: 'banter', agentId: dev.id, text: `${dev.name}: "${reply}"` });
   } else {
     if (verdict) task.qaNote = verdict.comentario;
     if (verdict) feed(s, { kind: 'qa', agentId: qa.id, text: `👍 ${qa.name} aprovou "${task.title}": "${verdict.comentario}"` });
-    if (verdict || Math.random() < 0.4) say(s, qa.id, pick(QA_APPROVE), 3000);
+    if (verdict || Math.random() < 0.4) say(s, qa.id, approveLine(), 3000);
     finish(s, task, dev, qa);
   }
 }
@@ -264,7 +324,15 @@ function onReal(s: GameState, ev: RealEvent) {
     task.hp = Math.max(1, Math.round(max * (1 - ev.progress)));
     if (agent) {
       feed(s, { kind: 'work', agentId: agent.id, text: `${agent.name}: ${ev.text}` });
-      if (ev.kind === 'text' || Math.random() < 0.3) say(s, agent.id, ev.text.length > 70 ? `${ev.text.slice(0, 68)}…` : ev.text, 3500);
+      // de vez em quando o agente solta uma piada em vez de narrar o que está fazendo
+      if (Math.random() < 0.14) {
+        const line = workLine(agent.role);
+        say(s, agent.id, line, 3500);
+        feed(s, { kind: 'banter', agentId: agent.id, text: `${agent.name}: "${line}"` });
+      } else if (ev.kind === 'tool') {
+        // o balão mostra a ação (já em português); o texto cru do modelo, que vem em inglês e cortado, fica só no terminal do agente
+        if (Math.random() < 0.4) say(s, agent.id, ev.text.length > 48 ? `${ev.text.slice(0, 46)}…` : ev.text, 3000);
+      } else if (Math.random() < 0.3) say(s, agent.id, workLine(agent.role), 3000);
     }
     return;
   }
@@ -312,6 +380,9 @@ function onReal(s: GameState, ev: RealEvent) {
 
 function tick(s: GameState) {
   runMaestro(s);
+  chatter(s);
+  spectate(s);
+  monsterTalk(s);
 
   for (const agent of s.agents.filter(isWorker)) {
     startNext(s, agent);
@@ -603,7 +674,7 @@ export function reducer(state: GameState, action: Action): GameState {
       });
     case 'resetProject': {
       const s = clone(state);
-      unstash(s, undefined, state.projectDir?.split('/').pop() ?? 'novo');
+      unstash(s, undefined, state.projectDir?.split(/[\\/]/).pop() ?? 'novo');
       return s;
     }
     case 'reset':

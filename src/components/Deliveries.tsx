@@ -230,7 +230,7 @@ function Detail({ task, state, targetDir, onLanded, onDiscarded }: { task: Task;
 
         {real && (
           <div className="block">
-            <div className="section-label">🗂 Arquivos {dir ? `em 📁 ${dir.split('/').pop()}` : ''}</div>
+            <div className="section-label">🗂 Arquivos {dir ? `em 📁 ${dir.split(/[\\/]/).pop()}` : ''}</div>
             {!files.length && !showAll && (
               <div className="hint">
                 Esta entrega não registrou os arquivos (é de antes desta versão).{' '}

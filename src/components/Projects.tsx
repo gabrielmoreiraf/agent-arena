@@ -186,5 +186,5 @@ export const projectKey = (dir: string) =>
 export const projectName = (status: RealStatus | null, dir?: string) => {
   const d = dir ?? status?.config.targetDir;
   if (!d) return undefined;
-  return status?.config.projects.find((p) => p.dir === d)?.name ?? d.split('/').pop();
+  return status?.config.projects.find((p) => p.dir === d)?.name ?? d.split(/[\\/]/).pop();
 };

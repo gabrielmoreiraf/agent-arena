@@ -17,6 +17,7 @@ import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { claudeAccount } from './claudeAccount';
+import { winCmd } from './winbin';
 
 export type ProviderKey = 'claude' | 'codex' | 'gemini' | 'openrouter';
 
@@ -78,8 +79,9 @@ export async function storedKey(id: ProviderKey): Promise<string | undefined> {
 
 // ---------- utilidades ----------
 
-const run = (bin: string, args: string[], timeout = 15_000) =>
+const run = (bin0: string, args0: string[], timeout = 15_000) =>
   new Promise<{ ok: boolean; out: string }>((resolve) => {
+    const { bin, args } = winCmd(bin0, args0);
     const child = execFile(bin, args, { timeout, maxBuffer: 2 * 1024 * 1024 }, (err, out, errOut) => resolve({ ok: !err, out: `${out ?? ''}${errOut ?? ''}`.trim() }));
     child.stdin?.end();
   });
@@ -284,7 +286,8 @@ export function startLogin(id: ProviderKey, claudeBin: string, method?: string):
   sessions.set(s.id, s);
   push(s, 'info', `$ ${bin} ${args.join(' ')}`);
   push(s, 'info', 'O navegador deve abrir para você autorizar. Se não abrir, use o botão com o link abaixo.');
-  const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, BROWSER: process.env.BROWSER } });
+  const exe = winCmd(bin, args);
+  const child = spawn(exe.bin, exe.args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, BROWSER: process.env.BROWSER } });
   s.child = child;
   child.stdout.on('data', (d) => push(s, 'out', d.toString()));
   child.stderr.on('data', (d) => push(s, 'err', d.toString()));

@@ -7,6 +7,7 @@
  * O resultado fica em cache por 10 minutos.
  */
 import { execFile } from 'node:child_process';
+import { winCmd } from './winbin';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -48,8 +49,9 @@ async function openrouter(): Promise<ModelList> {
   return { provider: 'openrouter', models, source: 'api' };
 }
 
-const run = (cmd: string, args: string[]) =>
+const run = (cmd0: string, args0: string[]) =>
   new Promise<string>((res) => {
+    const { bin: cmd, args } = winCmd(cmd0, args0);
     const c = execFile(cmd, args, { timeout: 8_000 }, (_e, out) => res(String(out ?? '').trim()));
     c.stdin?.end();
   });

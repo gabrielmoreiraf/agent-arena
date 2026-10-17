@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ConnectionStatus } from '../server/connections';
 import { Accounts } from './components/Accounts';
 import { AgentEditor, newAgent } from './components/AgentEditor';
@@ -9,9 +9,12 @@ import { TaskDetail } from './components/TaskDetail';
 import { AgentTerminal } from './components/AgentTerminal';
 import { Deliveries } from './components/Deliveries';
 import { Ecosystem } from './components/Ecosystem';
+import { Chat } from './components/Chat';
 import { Feed } from './components/Feed';
 import { HeroBar } from './components/HeroBar';
 import { Integrations } from './components/Integrations';
+import { Live, LiveHistory, LivePicker, useLive } from './components/Live';
+import { mirrorState } from './engine/mirror';
 import { Projects, projectName } from './components/Projects';
 import { RealConfig } from './components/RealConfig';
 import { realUsage, arenaUsage } from './engine/usage';
@@ -24,12 +27,35 @@ import { cancelJob, controlJobs, useRealRunner } from './engine/realRunner';
 import type { RealUsage } from './engine/usage';
 import type { Agent, RawTask } from './types';
 
-type Panel = null | 'score' | 'accounts' | 'integrations' | 'real' | 'projects' | { term: string } | { task: string } | { agentId: string } | { draft: Agent };
+type Panel = null | 'score' | 'accounts' | 'integrations' | 'real' | 'projects' | 'livepick' | { liveWorker: string } | { term: string } | { task: string } | { agentId: string } | { draft: Agent };
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
-  const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco'>('arena');
+  const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco' | 'live'>('arena');
+  // sessão do Claude Code espelhada na arena (fica salva no navegador)
+  const [mirrorId, setMirrorId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('agent-arena:mirror');
+    } catch {
+      return null;
+    }
+  });
+  const live = useLive(mirrorId);
+  const liveWorking = live.data?.sessions.filter((s) => s.state === 'working').length ?? 0;
   const [panel, setPanel] = useState<Panel>(null);
+  const setMirror = (id: string | null) => {
+    setMirrorId(id);
+    try {
+      if (id) localStorage.setItem('agent-arena:mirror', id);
+      else localStorage.removeItem('agent-arena:mirror');
+    } catch {
+      /* sem storage: vale só nesta sessão */
+    }
+    if (id) {
+      setView('arena');
+      setPanel(null);
+    }
+  };
   const [real, setReal] = useState<RealUsage | null>(null);
   // tela de boas-vindas: aparece sempre que abre (a menos que a pessoa peça para não mostrar) e pelo botão ? no topo
   const [welcome, setWelcome] = useState(() => {
@@ -95,6 +121,18 @@ export function App() {
     if (currentDir) dispatch({ type: 'switchProject', dir: currentDir, name: projectName(runner.status, currentDir) ?? currentDir });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDir]);
+  // anexa a pasta de uma sessão ao vivo como projeto do Arena
+  const attachLive = async (dir: string) => {
+    try {
+      const r = await fetch('/api/real/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'attach', dir }) });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      runner.setStatus(data);
+      flash(`Projeto anexado: ${dir}`);
+    } catch (e) {
+      flash(`Não deu para anexar: ${e instanceof Error ? e.message : e}`);
+    }
+  };
   const deleteTask = (id: string) => {
     const jobId = latest.current.tasks.find((t) => t.id === id)?.jobId;
     if (jobId) cancelJob(jobId);
@@ -187,6 +225,25 @@ export function App() {
   const used5 = r5?.total ?? (claude ? arenaUsage(claude, '5h', now).total : 0);
   const elixir = limit5h ? Math.max(0, 1 - (r5?.pct ?? used5 / limit5h)) : 1;
 
+  const mirrored = useMemo(() => {
+    const sess = mirrorId ? live.data?.sessions.find((x) => x.id === mirrorId) : undefined;
+    return sess ? mirrorState(state, sess) : null;
+  }, [mirrorId, live.data, state]);
+  const mirrorSession = mirrorId ? live.data?.sessions.find((x) => x.id === mirrorId) : undefined;
+  const shown = mirrored ?? state;
+  const mirrorEnded = !!mirrorId && !!live.data && !mirrorSession;
+
+  // ao entrar: se há Claude rodando e nada espelhado, pergunta qual mostrar na arena (uma vez por abertura)
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asked.current || welcome || mirrorId || panel || !live.data) return;
+    asked.current = true;
+    if (live.data.sessions.length) setPanel('livepick');
+  }, [live.data, welcome, mirrorId, panel]);
+  const liveWorker = panel && typeof panel === 'object' && 'liveWorker' in panel && mirrorSession
+    ? [mirrorSession.main, ...mirrorSession.subagents].find((w) => `live-${w.id}` === panel.liveWorker)
+    : undefined;
+
   const editing =
     panel && typeof panel === 'object'
       ? 'draft' in panel
@@ -233,6 +290,9 @@ export function App() {
             <button className={`btn sm ${view === 'arena' ? 'on' : ''}`} onClick={() => setView('arena')}>Arena</button>
             <button className={`btn sm ${view === 'board' ? 'on' : ''}`} onClick={() => setView('board')}>Quadro</button>
             <button className={`btn sm ${view === 'eco' ? 'on' : ''}`} onClick={() => setView('eco')}>Ecossistema</button>
+            <button className={`btn sm ${view === 'live' ? 'on' : ''}`} onClick={() => setView('live')} title="O que o seu Claude Code está fazendo agora, em qualquer projeto">
+              {liveWorking > 0 && <span className="dot working" />} Ao vivo{liveWorking > 0 ? ` (${liveWorking})` : ''}
+            </button>
             <button className={`btn sm ${view === 'done' ? 'on' : ''}`} onClick={() => setView('done')}>
               Entregas ({state.tasks.filter((t) => t.status === 'done').length})
             </button>
@@ -248,7 +308,29 @@ export function App() {
             </button>
           </div>
           {view === 'arena' ? (
-            <Arena state={state} onAgent={openAgent} onAccounts={() => setPanel('accounts')} onProjects={() => setPanel('projects')} onControl={(a, id) => control(a, id)} onTask={(id) => setPanel({ task: id })} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
+            <Arena
+              state={shown}
+              connected={conns ? conns.some((c) => c.connected) : state.providers.some((p) => p.connected)}
+              hasProject={!!runner.status?.config.targetDir}
+              onAgent={mirrored ? (id) => setPanel({ liveWorker: id }) : openAgent}
+              onAccounts={() => setPanel('accounts')}
+              onProjects={() => setPanel('projects')}
+              onControl={mirrored ? undefined : (a, id) => control(a, id)}
+              onTask={mirrored ? undefined : (id) => setPanel({ task: id })}
+              banner={
+                mirrorId && (
+                  <div className={`live-banner ${mirrorEnded ? 'ended' : ''}`}>
+                    <span className={`dot ${mirrorSession?.state ?? 'idle'}`} />
+                    <span className="grow">
+                      {mirrorEnded ? 'A sessão espelhada parou de aparecer (sem atividade há 20 min).' : `Ao vivo · 📁 ${mirrorSession?.project ?? '…'} · ${mirrorSession?.title ?? ''}`}
+                    </span>
+                    <button className="btn sm" onClick={() => setPanel('livepick')}>Trocar</button>
+                    <button className="btn sm ghost" onClick={() => setMirror(null)}>Sair</button>
+                  </div>
+                )
+              } elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
+          ) : view === 'live' ? (
+            <Live data={live.data} error={live.error} known={runner.status?.config.projects.map((p) => p.dir) ?? []} onUse={attachLive} mirrorId={mirrorId} onMirror={setMirror} />
           ) : view === 'eco' ? (
             <Ecosystem state={state} projectName={projectName(runner.status)} onAgent={openAgent} />
           ) : view === 'done' ? (
@@ -263,11 +345,16 @@ export function App() {
           )}
         </section>
 
-        <Feed state={state} />
+        <div className="side-stack">
+          <Feed state={shown} />
+          <Chat state={shown} />
+        </div>
       </div>
 
-      <HeroBar state={state} onAgent={openAgent} onNew={() => setPanel({ draft: newAgent() })} onExport={exportAgents} />
+      <HeroBar state={shown} onAgent={mirrored ? (id) => setPanel({ liveWorker: id }) : openAgent} onNew={() => setPanel({ draft: newAgent() })} onExport={exportAgents} />
 
+      {panel === 'livepick' && live.data && <LivePicker data={live.data} onPick={setMirror} onClose={() => setPanel(null)} />}
+      {liveWorker && <LiveHistory worker={liveWorker} onClose={() => setPanel(null)} />}
       {panel === 'score' && <Scoreboard state={state} onClose={() => setPanel(null)} onAgent={openAgent} />}
       {panel === 'accounts' && (
         <Accounts

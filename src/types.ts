@@ -107,6 +107,8 @@ export interface Task {
   readingSince?: number;
   /** quando o Maestro despachou o pergaminho para o agente (animação) */
   assignedAt?: number;
+  /** golpe a usar na arena (modo ao vivo: vem da ferramenta que o Claude está usando) */
+  fx?: string;
 }
 
 export type FeedKind = 'maestro' | 'work' | 'qa' | 'banter' | 'done' | 'system' | 'level';
@@ -146,6 +148,18 @@ export interface Provider {
   events: UsageEvent[];
 }
 
+/** mensagem do papo dos agentes (cada balão de fala vira uma) */
+export interface ChatMsg {
+  id: string;
+  at: number;
+  agentId: string;
+  /** com quem está falando (resposta) */
+  toId?: string;
+  /** tipo do monstro, quando a fala é dele ou para ele (a fala fica no papo mesmo depois que a tarefa acaba) */
+  monster?: string;
+  text: string;
+}
+
 export interface Bubble {
   agentId: string;
   text: string;
@@ -173,6 +187,8 @@ export interface GameState {
   agents: Agent[];
   tasks: Task[];
   feed: FeedItem[];
+  /** conversa dos agentes (mais antiga primeiro) */
+  chat?: ChatMsg[];
   providers: Provider[];
   bubbles: Bubble[];
   speed: 0 | 1 | 3;

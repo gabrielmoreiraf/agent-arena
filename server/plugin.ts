@@ -3,6 +3,7 @@ import type { Plugin } from 'vite';
 import { exportAgents } from './exportAgents';
 import { INTEGRATIONS, importFrom, integrationStatus, type IntegrationId } from './integrations';
 import { claudeAccount } from './claudeAccount';
+import { readLive } from './live';
 import { listModels } from './models';
 import { allStatus, cancelSession, disconnect, getSession, openInTerminal, openrouterAuthUrl, openrouterCallback, openUrl, saveKey, sendInput, startLogin, type ProviderKey } from './connections';
 import { Runner } from './runner';
@@ -47,6 +48,7 @@ export function arenaApi(env: Record<string, string>, root: string): Plugin {
         if (!isLocalRequest(req)) return send(res, 403, { error: 'Acesso negado: o Agent Arena só aceita requisições locais (127.0.0.1).' });
         const url = new URL(req.url, 'http://localhost');
         try {
+          if (url.pathname === '/api/live') return send(res, 200, await readLive(url.searchParams.get('session') ?? undefined));
           if (url.pathname === '/api/usage') {
             const [usage, account] = await Promise.all([readUsage(env), claudeAccount(runner.bin, url.searchParams.has('fresh'))]);
             return send(res, 200, { ...(usage as object), account });

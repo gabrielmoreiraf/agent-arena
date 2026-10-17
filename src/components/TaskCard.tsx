@@ -44,7 +44,7 @@ export function TaskCard({ task, state, onDelete, onRetry }: { task: Task; state
               </span>
             )}
             {task.bounces > 0 && <span className="chip bad">🐞 x{task.bounces}</span>}
-            {task.projectDir && <span className="chip" title={task.projectDir}>📁 {task.projectDir.split('/').pop()}</span>}
+            {task.projectDir && <span className="chip" title={task.projectDir}>📁 {task.projectDir.split(/[\\/]/).pop()}</span>}
             {task.worktree && !task.landedSha && !task.discarded && (
               <span className="chip good" title={`Branch isolada: ${task.worktree.branch}`}>🌿 branch</span>
             )}

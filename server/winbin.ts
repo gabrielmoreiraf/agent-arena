@@ -1,6 +1,6 @@
 /**
  * No Windows o npm instala as CLIs como shims `.cmd`, que o Node não executa sem shell (ENOENT).
- * Aqui o shim é lido e trocado por `node <script.js>`, sem passar por shell (os argumentos, como prompts, não são reinterpretados).
+ * Aqui o shim é lido e trocado por `node <script.js>` (ou pelo `.exe` nativo, como no Claude Code atual), sem passar por shell (os argumentos, como prompts, não são reinterpretados).
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { delimiter, isAbsolute, join, resolve } from 'node:path';
@@ -14,10 +14,10 @@ function resolveShim(bin: string) {
     const cmd = join(dir, `${bin}.cmd`);
     if (!dir || !existsSync(cmd)) continue;
     const text = readFileSync(cmd, 'utf8');
-    const m = text.match(/"%dp0%\\+([^"]+\.js)"/i) ?? text.match(/"%~dp0\\+([^"]+\.js)"/i);
+    const m = text.match(/"%dp0%\\+([^"]+\.(?:js|exe))"/i) ?? text.match(/"%~dp0\\+([^"]+\.(?:js|exe))"/i);
     if (m) {
       const script = resolve(dir, m[1]);
-      if (existsSync(script)) found = { bin: process.execPath, pre: [script] };
+      if (existsSync(script)) found = /\.exe$/i.test(script) ? { bin: script, pre: [] } : { bin: process.execPath, pre: [script] };
     }
     break;
   }

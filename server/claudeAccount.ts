@@ -5,6 +5,7 @@
  * O resultado é guardado por 45s para não rodar a CLI a cada abertura de tela.
  */
 import { execFile } from 'node:child_process';
+import { winCmd } from './winbin';
 
 export interface UsageWindow {
   label: string;
@@ -23,10 +24,11 @@ export interface ClaudeAccount {
   at: number;
 }
 
-const run = (bin: string, args: string[], timeout: number) =>
-  new Promise<string>((resolve, reject) =>
-    execFile(bin, args, { timeout, maxBuffer: 2 * 1024 * 1024 }, (err, out, errOut) => (err && !out ? reject(new Error(errOut || err.message)) : resolve(out))).stdin?.end(),
-  );
+const run = (bin0: string, args0: string[], timeout: number) =>
+  new Promise<string>((resolve, reject) => {
+    const { bin, args } = winCmd(bin0, args0);
+    execFile(bin, args, { timeout, maxBuffer: 2 * 1024 * 1024 }, (err, out, errOut) => (err && !out ? reject(new Error(errOut || err.message)) : resolve(out))).stdin?.end();
+  });
 
 let cache: { at: number; value: ClaudeAccount } | null = null;
 let inflight: Promise<ClaudeAccount> | null = null;

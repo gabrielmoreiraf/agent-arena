@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { soulName } from '../data/quotes';
 import { MONSTERS, MONSTER_BY_TYPE, MONSTER_INFO } from '../sprites/monsters';
 import { GHOST, GHOST_PAL } from '../sprites/props';
@@ -63,28 +63,53 @@ export function Chat({ state, onMuted }: { state: GameState; onMuted: (muted: bo
   const hidden = (at: number) => quiet.current.some((r) => at >= r.from && at <= r.to);
   const msgs = (state.chat ?? []).filter((m) => m.at <= now && !hidden(m.at) && who(m.agentId, m.monster)).slice(-60);
 
-  // só acompanha as mensagens novas se você está no fim; se subiu para ler o antigo, o scroll fica onde está
+  // Acompanha em tempo real enquanto você está no fim. Só uma ação sua (roda, toque, arrastar a barra, teclado)
+  // pode soltar o scroll; reajustes de layout e eventos de scroll do navegador nunca soltam.
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
+  const touching = useRef(false);
+  const idle = useRef<number>();
   const [away, setAway] = useState(false);
   const last = msgs[msgs.length - 1]?.id;
-  useEffect(() => {
+  const pin = () => {
     const el = box.current;
-    if (!el) return;
-    if (stick.current) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-    else setAway(true);
-  }, [last]);
+    if (el) el.scrollTop = el.scrollHeight;
+  };
+  // a cada render, antes de pintar: se está acompanhando, cola no fim (cobre rajadas de mensagens de uma vez)
+  useLayoutEffect(() => {
+    if (stick.current) pin();
+    else if (last) setAway(true);
+  });
+  const userAct = (hold = 300) => {
+    touching.current = true;
+    window.clearTimeout(idle.current);
+    if (hold) idle.current = window.setTimeout(() => (touching.current = false), hold);
+  };
+  useEffect(() => {
+    const up = () => (touching.current = false);
+    window.addEventListener('pointerup', up);
+    return () => {
+      window.removeEventListener('pointerup', up);
+      window.clearTimeout(idle.current);
+    };
+  }, []);
   const onScroll = () => {
     const el = box.current;
     if (!el) return;
     const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-    stick.current = atEnd;
-    if (atEnd) setAway(false);
+    if (touching.current) {
+      stick.current = atEnd;
+      setAway(!atEnd);
+    } else if (stick.current && !atEnd) pin();
+    else if (atEnd) {
+      stick.current = true;
+      setAway(false);
+    }
   };
   const toEnd = () => {
     stick.current = true;
     setAway(false);
-    box.current?.scrollTo({ top: box.current.scrollHeight, behavior: 'smooth' });
+    pin();
   };
 
   return (
@@ -100,7 +125,17 @@ export function Chat({ state, onMuted }: { state: GameState; onMuted: (muted: bo
         </button>
       </div>
       {muted && <div className="hint chat-muted">Papo encerrado. Os agentes estão quietos.</div>}
-      <div className="scroll chat-scroll" ref={box} onScroll={onScroll}>
+      <div
+        className="scroll chat-scroll"
+        ref={box}
+        onScroll={onScroll}
+        onWheel={() => userAct()}
+        onTouchStart={() => userAct(0)}
+        onTouchEnd={() => userAct()}
+        onPointerDown={() => userAct(0)}
+        onKeyDown={() => userAct()}
+        tabIndex={0}
+      >
         {!msgs.length && !muted && <div className="hint">Quando os agentes trabalharem, eles vão conversando aqui. Os monstros também respondem.</div>}
         {msgs.map((m: ChatMsg, i) => {
           const w = who(m.agentId, m.monster)!;

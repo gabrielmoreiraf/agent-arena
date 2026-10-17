@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import type { ConnectionStatus } from '../server/connections';
 import { Accounts } from './components/Accounts';
 import { AgentEditor, newAgent } from './components/AgentEditor';
-import { Arena } from './components/Arena';
 import { Board } from './components/Board';
 import { Welcome } from './components/Welcome';
 import { TaskDetail } from './components/TaskDetail';
@@ -19,7 +18,6 @@ import { Live, LiveHistory, LivePicker, useLive } from './components/Live';
 import { mirrorState } from './engine/mirror';
 import { Projects, projectName } from './components/Projects';
 import { RealConfig } from './components/RealConfig';
-import { realUsage, arenaUsage } from './engine/usage';
 import { Scoreboard } from './components/Scoreboard';
 import { TaskQueue } from './components/TaskQueue';
 import { TopBar } from './components/TopBar';
@@ -33,7 +31,7 @@ type Panel = null | 'score' | 'accounts' | 'integrations' | 'real' | 'projects' 
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
-  const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco' | 'live' | 'lab'>('arena');
+  const [view, setView] = useState<'board' | 'done' | 'eco' | 'live' | 'lab'>('lab');
   // sessão do Claude Code espelhada na arena (fica salva no navegador)
   const [mirrorId, setMirrorId] = useState<string | null>(() => {
     try {
@@ -54,7 +52,7 @@ export function App() {
       /* sem storage: vale só nesta sessão */
     }
     if (id) {
-      setView('arena');
+      setView('lab');
       setPanel(null);
     }
   };
@@ -220,13 +218,6 @@ export function App() {
     }
   };
 
-  // elixir = o que sobra da janela de 5h do Claude
-  const claude = state.providers.find((p) => p.id === 'claude');
-  const limit5h = claude?.limits['5h'] ?? 0;
-  const r5 = claude ? realUsage(real, 'claude', '5h', limit5h) : null;
-  const used5 = r5?.total ?? (claude ? arenaUsage(claude, '5h', now).total : 0);
-  const elixir = limit5h ? Math.max(0, 1 - (r5?.pct ?? used5 / limit5h)) : 1;
-
   const mirrored = useMemo(() => {
     const sess = mirrorId ? live.data?.sessions.find((x) => x.id === mirrorId) : undefined;
     return sess ? mirrorState(state, sess) : null;
@@ -289,8 +280,7 @@ export function App() {
 
         <section className="arena-wrap">
           <div className="arena-tabs">
-            <button className={`btn sm ${view === 'arena' ? 'on' : ''}`} onClick={() => setView('arena')}>Arena</button>
-            <button className={`btn sm ${view === 'lab' ? 'on' : ''}`} onClick={() => setView('lab')} title="Outro mapa: o laboratório, com sala do líder, café, mesa central e porta biométrica">Laboratório</button>
+            <button className={`btn sm ${view === 'lab' ? 'on' : ''}`} onClick={() => setView('lab')} title="O laboratório: sala do líder, café, mesa central e porta biométrica">Laboratório</button>
             <button className={`btn sm ${view === 'board' ? 'on' : ''}`} onClick={() => setView('board')}>Quadro</button>
             <button className={`btn sm ${view === 'eco' ? 'on' : ''}`} onClick={() => setView('eco')}>Ecossistema</button>
             <button className={`btn sm ${view === 'live' ? 'on' : ''}`} onClick={() => setView('live')} title="O que o seu Claude Code está fazendo agora, em qualquer projeto">
@@ -310,9 +300,9 @@ export function App() {
               Recomeçar projeto
             </button>
           </div>
-          {view === 'arena' || view === 'lab' ? (
+          {view === 'lab' ? (
             (() => {
-              // as duas vistas (Arena e Laboratório) mostram o mesmo jogo, com as mesmas props
+              // o Laboratório é a vista principal do jogo (a Arena antiga está desativada, o código segue em components/Arena.tsx)
               const common = {
                 state: shown,
                 connected: conns ? conns.some((c) => c.connected) : state.providers.some((p) => p.connected),
@@ -333,7 +323,7 @@ export function App() {
                   </div>
                 ),
               };
-              return view === 'lab' ? <Lab {...common} /> : <Arena {...common} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />;
+              return <Lab {...common} />;
             })()
           ) : view === 'live' ? (
             <Live data={live.data} error={live.error} known={runner.status?.config.projects.map((p) => p.dir) ?? []} onUse={attachLive} mirrorId={mirrorId} onMirror={setMirror} />

@@ -493,11 +493,11 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .toast { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 80; padding: 10px 14px; animation: pop 160ms steps(3); max-width: 90vw; }
 
 /* ---------- execução real ---------- */
-.chip.live { color: var(--gold); box-shadow: 0 0 0 1px var(--gold); animation: live-blink 1.2s steps(2) infinite; }
+.chip.live-chip { color: var(--gold); box-shadow: 0 0 0 1px var(--gold); animation: live-blink 1.2s steps(2) infinite; }
 @keyframes live-blink { 50% { opacity: 0.55; } }
 .task .blocked { display: grid; gap: 6px; justify-items: start; line-height: 1.1; word-break: break-word; }
 .task .output { font-size: 14px; }
-@media (prefers-reduced-motion: reduce) { .chip.live { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .chip.live-chip { animation: none; } }
 
 /* ---------- entregas ---------- */
 .deliveries { flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 12px; }

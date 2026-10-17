@@ -50,7 +50,7 @@ export function TaskCard({ task, state, onDelete, onRetry }: { task: Task; state
             )}
             {task.landedSha && <span className="chip" title={`Merge ${task.landedSha}`}>🚀 aplicada</span>}
             {task.paused && <span className="chip bad">⏸ pausado</span>}
-            {task.jobId && !task.paused && <span className="chip live" title="Claude Code rodando de verdade">⚡ ao vivo</span>}
+            {task.jobId && !task.paused && <span className="chip live-chip" title="Claude Code rodando de verdade">⚡ ao vivo</span>}
             {!!task.realTokens && (
               <span className="chip" title={task.costUsd ? `Custo de API equivalente: US$ ${task.costUsd.toFixed(3)}` : 'Tokens reais'}>
                 {fmtTokens(task.realTokens)} tok

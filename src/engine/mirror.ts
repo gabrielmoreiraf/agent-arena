@@ -105,7 +105,7 @@ export function mirrorState(base: GameState, s: LiveSession): GameState {
       const B = all[(rnd >> 3) % all.length];
       if (A.id === B.id) continue;
       const task = tasks.find((t) => t.id === A.currentTaskId) ?? tasks.find((t) => t.id === B.currentTaskId);
-      pushThread(`lt-${b}`, [A.id, B.id], thread(rnd % 2 === 0 ? 'farpa' : 'work', { a: A, b: B, type: task?.type }, `${A.id}-${b}`), b * STEP);
+      pushThread(`lt-${b}`, [A.id, B.id], thread(rnd % 3 === 0 ? 'farpa' : rnd % 3 === 1 ? 'gossip' : 'work', { a: A, b: B, type: task?.type }, `${A.id}-${b}`), b * STEP);
     }
   }
   // tudo que aparece no balão também vai para o papo: ações recentes e as piadas de cada janela de 8s

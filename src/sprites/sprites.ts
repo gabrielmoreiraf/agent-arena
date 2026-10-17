@@ -55,14 +55,20 @@ export const SPRITES: Record<string, string[]> = {
     [9, 14, 'A'],
     [10, 14, 'A'],
     [11, 13, 'A'],
+    // estetoscópio no pescoço
+    [9, 5, 'B'],
+    [10, 5, 'B'],
+    [11, 6, 'B'],
+    [12, 7, 'BB'],
   ]),
 
-  // UI/UX: boina, óculos redondos e um pincel
+  // UI/UX: BOINA GIGANTE, óculos redondos e um pincel
   designer: patch(BASE, [
-    [0, 4, ' AAAAA'],
-    [1, 3, 'AAAAAAAAA'],
-    [1, 12, 'A'],
-    [2, 3, 'ohAAAAAAho'],
+    [0, 3, 'AAAAAAAAAA'],
+    [0, 7, 'CC'],
+    [1, 1, 'AAAAAAAAAAAAAA'],
+    [2, 0, 'AAAAAAAAAAAAAAAA'],
+    [3, 1, 'oAAAAAAAAAAAAo'],
     [5, 3, 'BeBssssBeB'],
     [5, 7, 'BB'],
     [9, 14, 'C'],
@@ -71,33 +77,47 @@ export const SPRITES: Record<string, string[]> = {
     [12, 14, 'p'],
   ]),
 
-  // Dev Júnior: boné de hélice, olhos arregalados, gota de suor
+  // Dev Júnior: boné de hélice, olhos arregalados, gota de suor na testa e ORELHAS GRANDES
   junior: patch(BASE, [
     [0, 5, 'BB  BB'],
     [0, 7, 'oo'],
     [1, 4, 'AAAAAAAA'],
     [2, 3, 'oAAAAAAAAo'],
     [5, 4, 'ee    ee'],
-    [3, 13, 'D'],
-    [4, 14, 'D'],
+    [3, 11, 'D'],
+    // orelha esquerda
+    [3, 1, 'o'],
+    [4, 0, 'os'],
+    [5, 0, 'oss'],
+    [6, 0, 'os'],
+    [7, 1, 'o'],
+    // orelha direita
+    [3, 14, 'o'],
+    [4, 14, 'so'],
+    [5, 13, 'sso'],
+    [6, 14, 'so'],
+    [7, 14, 'o'],
   ]),
 
-  // Dev Pleno: fone de ouvido, moletom com capuz
-  pleno: patch(BASE, [
-    [1, 4, 'AAAAAAAA'],
-    [2, 2, 'A'],
-    [2, 13, 'A'],
-    [3, 1, 'A'],
-    [3, 14, 'A'],
-    [4, 0, 'BA'],
-    [4, 14, 'AB'],
-    [5, 0, 'BA'],
-    [5, 14, 'AB'],
-    [6, 0, 'BA'],
-    [6, 14, 'AB'],
-    [9, 6, 'CC'],
-    [9, 8, 'CC'],
-  ]),
+  // Dev Pleno: CABEÇA GRANDE, fone de ouvido e moletom com capuz (corpinho pequeno)
+  pleno: [
+    '....oooooooo....',
+    '..ooAAAAAAAAoo..',
+    '.oAhhhhhhhhhhAo.',
+    'oBAhhhhhhhhhhABo',
+    'oBAssssssssssABo',
+    'oBAssessssessABo',
+    'oBAssessssessABo',
+    'oBAssssssssssABo',
+    '.oosssmmmmsssoo.',
+    '..oossssssssoo..',
+    '....oossssoo....',
+    '...occcccccco...',
+    '..occCccccCcco..',
+    '..occcccccccco..',
+    '...oppppppppo...',
+    '...obbo..obbo...',
+  ],
 
   // Dev Sênior: óculos, barba, caneca de café
   senior: patch(BASE, [
@@ -110,6 +130,10 @@ export const SPRITES: Record<string, string[]> = {
     [12, 13, 'BB'],
     [9, 14, 'w'],
     [8, 14, ' w'],
+    // narigão por cima do bigode
+    [6, 6, 'osso'],
+    [7, 6, 'osso'],
+    [8, 7, 'mm'],
   ]),
 
   // DevOps: capacete amarelo e chave inglesa
@@ -124,16 +148,29 @@ export const SPRITES: Record<string, string[]> = {
     [12, 13, 'C'],
     [10, 4, 'AA'],
     [11, 4, 'AA'],
+    // pés gigantes
+    [14, 1, 'obbbbbo'],
+    [14, 9, 'obbbbbo'],
+    [15, 0, 'obbbbbbo'],
+    [15, 8, 'obbbbbbo'],
   ]),
 
-  // DBA: capuz de mago e cilindro de banco de dados
+  // DBA: CABELÃO e cilindro de banco de dados
   dba: patch(BASE, [
-    [0, 7, 'AA'],
-    [1, 5, 'AAAAAA'],
-    [2, 3, 'oAAAAAAAAo'],
-    [3, 2, 'oAAhhhhhhAAo'],
-    [4, 2, 'oA'],
-    [4, 12, 'Ao'],
+    [0, 3, 'ohhhhhhhho'],
+    [1, 2, 'ohhhhhhhhhho'],
+    [2, 1, 'ohhhhhhhhhhhho'],
+    [3, 0, 'ohhhhhhhhhhhhhho'],
+    [4, 0, 'ohh'],
+    [4, 13, 'hho'],
+    [5, 0, 'ohh'],
+    [5, 13, 'hho'],
+    [6, 0, 'ohh'],
+    [6, 13, 'hho'],
+    [7, 0, 'ohh'],
+    [7, 13, 'hho'],
+    [8, 1, 'oh'],
+    [8, 13, 'ho'],
     [10, 13, 'BBB'],
     [11, 12, 'BCCCB'],
     [12, 12, 'BBBBB'],
@@ -154,6 +191,11 @@ export const SPRITES: Record<string, string[]> = {
     [10, 12, 'C  C'],
     [11, 12, ' CC'],
     [12, 11, 'D'],
+    // olhos esbugalhados
+    [5, 4, 'www'],
+    [6, 4, 'wew'],
+    [5, 9, 'www'],
+    [6, 9, 'wew'],
   ]),
 
   // Robô genérico para agentes personalizados

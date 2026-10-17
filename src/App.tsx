@@ -11,6 +11,7 @@ import { Deliveries } from './components/Deliveries';
 import { Ecosystem } from './components/Ecosystem';
 import { Chat } from './components/Chat';
 import { Feed } from './components/Feed';
+import { Lab } from './components/Lab';
 import { HeroBar } from './components/HeroBar';
 import { Integrations } from './components/Integrations';
 import { Live, LiveHistory, LivePicker, useLive } from './components/Live';
@@ -31,7 +32,7 @@ type Panel = null | 'score' | 'accounts' | 'integrations' | 'real' | 'projects' 
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
-  const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco' | 'live'>('arena');
+  const [view, setView] = useState<'arena' | 'board' | 'done' | 'eco' | 'live' | 'lab'>('arena');
   // sessão do Claude Code espelhada na arena (fica salva no navegador)
   const [mirrorId, setMirrorId] = useState<string | null>(() => {
     try {
@@ -288,6 +289,7 @@ export function App() {
         <section className="arena-wrap">
           <div className="arena-tabs">
             <button className={`btn sm ${view === 'arena' ? 'on' : ''}`} onClick={() => setView('arena')}>Arena</button>
+            <button className={`btn sm ${view === 'lab' ? 'on' : ''}`} onClick={() => setView('lab')} title="Outro mapa: o laboratório, com sala do líder, café, mesa central e porta biométrica">Laboratório</button>
             <button className={`btn sm ${view === 'board' ? 'on' : ''}`} onClick={() => setView('board')}>Quadro</button>
             <button className={`btn sm ${view === 'eco' ? 'on' : ''}`} onClick={() => setView('eco')}>Ecossistema</button>
             <button className={`btn sm ${view === 'live' ? 'on' : ''}`} onClick={() => setView('live')} title="O que o seu Claude Code está fazendo agora, em qualquer projeto">
@@ -307,18 +309,19 @@ export function App() {
               Recomeçar projeto
             </button>
           </div>
-          {view === 'arena' ? (
-            <Arena
-              state={shown}
-              connected={conns ? conns.some((c) => c.connected) : state.providers.some((p) => p.connected)}
-              hasProject={!!runner.status?.config.targetDir}
-              onAgent={mirrored ? (id) => setPanel({ liveWorker: id }) : openAgent}
-              onAccounts={() => setPanel('accounts')}
-              onProjects={() => setPanel('projects')}
-              onControl={mirrored ? undefined : (a, id) => control(a, id)}
-              onTask={mirrored ? undefined : (id) => setPanel({ task: id })}
-              banner={
-                mirrorId && (
+          {view === 'arena' || view === 'lab' ? (
+            (() => {
+              // as duas vistas (Arena e Laboratório) mostram o mesmo jogo, com as mesmas props
+              const common = {
+                state: shown,
+                connected: conns ? conns.some((c) => c.connected) : state.providers.some((p) => p.connected),
+                hasProject: !!runner.status?.config.targetDir,
+                onAgent: mirrored ? (id: string) => setPanel({ liveWorker: id }) : openAgent,
+                onAccounts: () => setPanel('accounts'),
+                onProjects: () => setPanel('projects'),
+                onControl: mirrored ? undefined : (a: 'pause' | 'resume' | 'stop', id: string) => control(a, id),
+                onTask: mirrored ? undefined : (id: string) => setPanel({ task: id }),
+                banner: mirrorId && (
                   <div className={`live-banner ${mirrorEnded ? 'ended' : ''}`}>
                     <span className={`dot ${mirrorSession?.state ?? 'idle'}`} />
                     <span className="grow">
@@ -327,8 +330,10 @@ export function App() {
                     <button className="btn sm" onClick={() => setPanel('livepick')}>Trocar</button>
                     <button className="btn sm ghost" onClick={() => setMirror(null)}>Sair</button>
                   </div>
-                )
-              } elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />
+                ),
+              };
+              return view === 'lab' ? <Lab {...common} /> : <Arena {...common} elixir={elixir} elixirLabel={`Elixir: ${Math.round(elixir * 100)}% da janela de 5h do Claude`} />;
+            })()
           ) : view === 'live' ? (
             <Live data={live.data} error={live.error} known={runner.status?.config.projects.map((p) => p.dir) ?? []} onUse={attachLive} mirrorId={mirrorId} onMirror={setMirror} />
           ) : view === 'eco' ? (

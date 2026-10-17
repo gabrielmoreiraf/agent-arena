@@ -222,6 +222,15 @@ const MEME = [
   'Aí que o dia termina e a alma começa.',
 ];
 
+/** uma fofoca de escritório sorteada: acusação ("Michael quebrou rotas manuais") ou cobrança ("Cadê o mapa de calor, Manel?") */
+function gossipOne(rnd: () => number) {
+  const n = GOSSIP_NAMES[Math.floor(rnd() * GOSSIP_NAMES.length)];
+  const t = GOSSIP_THINGS[Math.floor(rnd() * GOSSIP_THINGS.length)];
+  const kind = rnd() < 0.5 ? 'blame' : 'ask';
+  const tpl = (kind === 'blame' ? GOSSIP_BLAME : GOSSIP_ASK)[Math.floor(rnd() * (kind === 'blame' ? GOSSIP_BLAME : GOSSIP_ASK).length)];
+  return { kind, n, x: t.bare, xa: t.art, text: tpl.split('{n}').join(n).split('{xa}').join(t.art).split('{x}').join(t.bare) };
+}
+
 const WORK_OPEN = ['Porra,', 'Caralho,', 'Mano,', 'Pô,', 'Aff,', 'Eita,', 'Meu Deus,', 'Olha só,', 'Sério?', 'Ué,', 'Sinceramente,', 'Gente,'];
 const WORK_CORE = [
   'esse código tá pior que fila de banco',
@@ -244,7 +253,7 @@ const WORK_END = ['', '', '', 'bora que o prazo é ontem.', 'vai dar certo (ment
 
 export function workLine(role: Role, seed?: string): string {
   const rnd = rngFrom(seed === undefined ? undefined : `w${seed}`);
-  const pool = [...(WORK[role] ?? WORK.custom!), ...(rnd() < 0.4 ? MEME : [])];
+  const pool = [...(WORK[role] ?? WORK.custom!), ...(rnd() < 0.4 ? MEME : []), ...(rnd() < 0.3 ? [gossipOne(rnd).text] : [])];
   return say(pool, [WORK_OPEN, WORK_CORE, WORK_END], seed === undefined ? undefined : `w${seed}`);
 }
 
@@ -349,7 +358,7 @@ const MAESTRO = [
 ];
 export const maestroLine = (seed?: string) => say(MAESTRO, null, seed);
 
-const SPAWN = ['📜 Deixa comigo!', '📜 Recebido, Maestro!', '📜 Bora!', '📜 Vem pra mim, caralho!', '📜 Mais uma? Beleza.', '📜 Já é!', '📜 Tá na mão!', '📜 Se der ruim a culpa é sua, Maestro.'];
+const SPAWN = ['📜 Deixa comigo!', '📜 Recebido, Dotor!', '📜 Bora!', '📜 Vem pra mim, caralho!', '📜 Mais uma? Beleza.', '📜 Já é!', '📜 Tá na mão!', '📜 Se der ruim a culpa é sua, Dotor.'];
 export const spawnLine = (seed?: string) => say(SPAWN, null, seed);
 
 // ---------- resposta de um agente à fala do outro ----------
@@ -428,9 +437,9 @@ const JAB_ROLE: Partial<Record<Role, string[]>> = {
     'Esses designers fazem protótipo lindo que ninguém consegue implementar.',
   ],
   maestro: [
-    'Esse Maestro só rege, nunca encosta no teclado.',
-    'Esse Maestro distribui tarefa como quem distribui culpa.',
-    'Esse Maestro acha que reunião é trabalho.',
+    'Esse Dotor só rege, nunca encosta no teclado.',
+    'Esse Dotor distribui tarefa como quem distribui culpa.',
+    'Esse Dotor acha que reunião é trabalho.',
   ],
 };
 
@@ -524,7 +533,7 @@ const MONSTER_TAUNT: Record<string, string[]> = {
   test: ['Eu passo… às vezes. Buuu.', 'Sou flaky, e daí?', 'Verde hoje, vermelho amanhã. Surpresa!', 'Cobertura de 100%? Que fofo.'],
   refactor: ['Mexe em mim e quebra o projeto inteiro.', 'Eu sou a dívida técnica. Prazer.', 'Ninguém entende como eu funciono. Nem eu.', 'Refatora, vai. Eu gosto de ver tentando.'],
 };
-const MONSTER_HURT = ['Ai! Isso doeu, caralho!', 'Tô quase morrendo… manda mais um commit!', 'Não me merge, por favor!', 'Para, para, eu entrego o código!', 'Argh! Meu último if…', 'Chama o Maestro, tão me matando!', 'AAAAHHHH NUM QUER NÃO!'];
+const MONSTER_HURT = ['Ai! Isso doeu, caralho!', 'Tô quase morrendo… manda mais um commit!', 'Não me merge, por favor!', 'Para, para, eu entrego o código!', 'Argh! Meu último if…', 'Chama o Dotor, tão me matando!', 'AAAAHHHH NUM QUER NÃO!'];
 
 /** fala de um monstro (tarefa): provoca o agente, ou geme quando está quase derrotado */
 export function monsterLine(type: string, mood: 'taunt' | 'hurt' = 'taunt', seed?: string): string {
@@ -626,6 +635,53 @@ export function debateLine(firstStance: Stance, seed?: string): string {
   return say(firstStance === 'cheer' || firstStance === 'push' ? COUNTER_TO_CHEER : COUNTER_TO_JEER, null, seed === undefined ? undefined : `d${seed}`);
 }
 
+// ---------- fofoca de escritório: colegas citados pelo nome, coisas quebradas e coisas cobradas ----------
+
+const GOSSIP_NAMES = ['Michael', 'Manel', 'Zé', 'Carlão', 'Dani', 'Rafa', 'Seu Jorge', 'Dona Marta'];
+/** `bare` = sem artigo ("quebrou rotas manuais"); `art` = com artigo ("cadê o mapa de calor") */
+const GOSSIP_THINGS: { bare: string; art: string }[] = [
+  { bare: 'rotas manuais', art: 'as rotas manuais' },
+  { bare: 'mapa de calor', art: 'o mapa de calor' },
+  { bare: 'filtro de data', art: 'o filtro de data' },
+  { bare: 'exportação em PDF', art: 'a exportação em PDF' },
+  { bare: 'tela de login', art: 'a tela de login' },
+  { bare: 'relatório mensal', art: 'o relatório mensal' },
+  { bare: 'dashboard', art: 'o dashboard' },
+  { bare: 'cadastro de usuário', art: 'o cadastro de usuário' },
+  { bare: 'notificações', art: 'as notificações' },
+  { bare: 'permissões', art: 'as permissões' },
+  { bare: 'gráfico de consumo', art: 'o gráfico de consumo' },
+  { bare: 'integração com a API', art: 'a integração com a API' },
+];
+const GOSSIP_BLAME = [
+  '{n} quebrou {x}.',
+  'Adivinha quem mexeu em {x}? {n}.',
+  '{n} mexeu em {x} e agora não abre.',
+  'Foi o {n}. Quebrou {x} de novo.',
+  '{n} jurou que não encostou em {x}. Encostou.',
+];
+const GOSSIP_ASK = [
+  'Cadê {xa}, {n}?',
+  '{n}, já terminou {xa}?',
+  'Cadê {xa}, {n}? O cliente tá perguntando.',
+  '{n}! E {xa}? Sumiu?',
+  'Alguém viu {xa}? Pergunta pro {n}.',
+];
+/** depois que alguém acusa: a conversa segue (0 = quem acusou, 1 = quem ouviu) */
+const GOSSIP_BLAME_CHAINS: Chain[] = [
+  [[1, 'De novo?! Foi no commit de ontem?'], [0, 'Foi. Eu avisei na daily.'], [1, 'Manda o {n} arrumar antes do cliente ver.']],
+  [[1, 'Impossível. O {n} jurou que testou.'], [0, 'Testou na máquina dele, claro.'], [1, 'Claro. Na máquina dele funciona.']],
+  [[1, 'E quem vai consertar {x}?'], [0, 'Eu é que não. Não é conta minha.'], [1, 'Nem minha. Deixa o {n} sofrer.']],
+  [[1, 'Sério? E o teste não pegou?'], [0, 'Que teste? O {n} não escreveu.'], [1, 'Aí é falta de respeito.']],
+];
+/** depois que alguém cobra: a conversa segue */
+const GOSSIP_ASK_CHAINS: Chain[] = [
+  [[1, 'O {n}? Sumiu desde segunda.'], [0, 'Sumiu com {xa} junto?'], [1, 'Levou {xa} e a esperança.']],
+  [[1, 'Tá quase pronto… o {n} tá só terminando.'], [0, 'Quase? Faz três dias que é quase.'], [1, 'Qualidade leva tempo, ué.']],
+  [[1, 'Pergunta pro {n}, eu só trabalho aqui.'], [0, 'Já perguntei. Ele respondeu "depende".'], [1, 'Então já era.']],
+  [[1, 'O {n} falou que entrega sexta.'], [0, 'Qual sexta?'], [1, 'Boa pergunta. Ninguém sabe.']],
+];
+
 // ---------- conversas com sentido: cada fala responde à anterior ----------
 
 /** uma fala de um roteiro; `who` é o índice de quem fala (0, 1 ou 2) */
@@ -634,7 +690,7 @@ export interface Turn {
   text: string;
 }
 type Chain = [number, string][];
-export type ThreadKind = 'work' | 'farpa' | 'cheer' | 'jeer' | 'push' | 'monster' | 'hurt';
+export type ThreadKind = 'work' | 'farpa' | 'cheer' | 'jeer' | 'push' | 'monster' | 'hurt' | 'review' | 'soul' | 'gossip';
 export interface ThreadCtx {
   /** quem abre a conversa (no monstro, é o monstro) */
   a: Who;
@@ -644,7 +700,12 @@ export interface ThreadCtx {
   c?: Who;
   /** tipo da tarefa, para falas específicas */
   type?: string;
+  /** título da tarefa (aparece nas falas de revisão) */
+  title?: string;
 }
+
+/** nome da alma de um monstro derrotado */
+export const soulName = (type: string) => `Alma do ${MONSTER_NAME[type] ?? 'Monstro'}`;
 
 export const MONSTER_NAME: Record<string, string> = { feature: 'Slime', bug: 'Besouro', infra: 'Golem', database: 'Barril', test: 'Fantasma', refactor: 'Dragão' };
 
@@ -719,6 +780,44 @@ const PUSH_CHAINS: Chain[] = [
   [[1, 'Tá entendendo, Major? Eu preciso de tempo.'], [0, 'Tô entendendo. Mas o cliente não.'], [1, 'Felizmente o cliente não tem meu telefone.']],
 ];
 
+/** o QA vai até a bancada do dev para validar e discutir a task: 0 = QA, 1 = dev */
+const REVIEW_CHAINS: Chain[] = [
+  [[0, 'Vim aqui tirar umas dúvidas da task "{t}", {b}.'], [1, 'Pode perguntar. Mas já aviso: na minha máquina funciona.'], [0, 'Na sua máquina eu não vou testar. Abre aí que eu mostro.'], [1, 'Tá, tá. Senta aí.']],
+  [[0, '{b}, rodei a "{t}" e achei umas coisas estranhas.'], [1, 'Estranhas como? Tem print?'], [0, 'Tenho print e tenho vídeo. Vem ver comigo.'], [1, 'Já tô levantando. 😤']],
+  [[0, 'Puxei a "{t}" aqui contigo, {b}. Vamos olhar os critérios de aceite?'], [1, 'Os critérios eram esses mesmo?'], [0, 'Eram. Estão no ticket. Que você não leu.'], [1, 'Tá. Lê pra mim.']],
+  [[0, 'Oi, {b}. Antes de aprovar a "{t}" eu preciso entender uma coisa.'], [1, 'Só uma?'], [0, 'Por enquanto.'], [1, 'Aí vem. Pode falar.']],
+  [[0, '{b}, cheguei. Vou testar a "{t}" aqui do seu lado.'], [1, 'Do meu lado? Vai ficar olhando por cima do meu ombro?'], [0, 'Vou. É o meu trabalho.'], [1, 'Que alegria a minha.']],
+  [[0, 'Build verde, {b}? Ótimo. Agora me mostra a "{t}" funcionando de verdade.'], [1, 'Funcionando, funcionando… tá quase.'], [0, 'Quase não é critério de aceite.'], [1, 'Aff. Espera um minuto.']],
+];
+
+/** as almas dos monstros derrotados rondam o laboratório enchendo o pessoal: 0 = alma, 1 = agente */
+const SOUL_ASK = [
+  'E aí, o que você tá fazendo?',
+  'O que é isso aí na sua tela?',
+  'Posso ver? Tá fazendo o quê, hein?',
+  'Tá aprontando o quê com a minha antiga casa?',
+  'Me conta: isso aí é o quê?',
+  'Tá fazendo o quê? Eu tô só olhando…',
+];
+const SOUL_DRAIN = [
+  'Só vou sugar um pouquinho da sua energia…',
+  'Hmm… que energia boa. Posso?',
+  'Deixa eu encostar aqui só um segundinho…',
+  'Tô com fome de produtividade. Obrigada pela doação.',
+];
+const SOUL_ASK_CHAINS: Chain[] = [
+  [[1, 'Isso não é da sua conta, alma penada!'], [0, 'Não é conta de vocês?! Eu morri por essa task!'], [1, 'E eu vou terminar por você. Vai assombrar outro.']],
+  [[1, 'Trabalhando! Me deixa em paz!'], [0, 'Trabalhando em quê? Ah, entendi: isso não é conta de vocês.'], [1, 'Justamente. Não é.']],
+  [[1, 'Tô fechando a task do {m}.'], [0, 'Isso não é conta de vocês! Era a MINHA task!'], [1, 'Era. Agora é história.']],
+  [[1, 'Tô tentando fechar o PR.'], [0, 'PR? Isso não é conta de vocês… é conta do CI.'], [1, 'Ainda tá vermelho. Obrigado por lembrar.']],
+  [[1, 'Código. Sabe aquilo que você vivia quebrando?'], [0, 'Ei! Isso não é conta de vocês, eu era um {m} de respeito!'], [1, 'Era mesmo. Descanse em paz.']],
+];
+const SOUL_DRAIN_CHAINS: Chain[] = [
+  [[1, 'Tá me sugando de novo?!'], [0, 'Só um pouquinho. Isso não é conta de vocês.'], [1, 'É sim, é a minha energia!']],
+  [[1, 'Para! Tô quase no deploy!'], [0, 'Deploy… que delícia de ansiedade.'], [1, 'Sai daqui, sanguessuga!']],
+  [[1, 'Sai, alma! Isso aqui é o meu café!'], [0, 'Ué, eu também quero. Isso não é conta de vocês.'], [1, 'É conta sim. Sou eu que pago o café.']],
+];
+
 /** depois da farpa e do revide, cada um fecha do seu jeito */
 const FARPA_CLOSERS: Chain[] = [
   [[0, 'Ai. Mentira, nem senti.'], [1, 'Aceita que dói menos.']],
@@ -769,7 +868,7 @@ const MONSTER_HURT_CHAINS: Chain[] = [
 export function thread(kind: ThreadKind, c: ThreadCtx, seed?: string): Turn[] {
   const r = rngFrom(seed === undefined ? undefined : `t${seed}`);
   const type = c.type ?? 'feature';
-  const v = { a: c.a.name, b: c.b.name, c: c.c?.name ?? '' };
+  const v: Record<string, string> = { a: c.a.name, b: c.b.name, c: c.c?.name ?? '', t: c.title ?? 'task', m: MONSTER_NAME[type] ?? 'monstro' };
   const chain = (ch: Chain): Turn[] => ch.map(([who, text]) => ({ who, text: fill(text, v) }));
   const pickChain = (list: Chain[]) => chain(one(list, r));
 
@@ -792,6 +891,17 @@ export function thread(kind: ThreadKind, c: ThreadCtx, seed?: string): Turn[] {
       const useDebate = !!c.c && r() < 0.6;
       const list = useDebate ? (kind === 'cheer' ? CHEER_DEBATE : JEER_DEBATE) : kind === 'cheer' ? CHEER_CHAINS : JEER_CHAINS;
       return [first, ...pickChain(list)];
+    }
+    case 'review':
+      return pickChain(REVIEW_CHAINS);
+    case 'gossip': {
+      const g = gossipOne(r);
+      Object.assign(v, { n: g.n, x: g.x, xa: g.xa });
+      return [{ who: 0, text: g.text }, ...pickChain(g.kind === 'blame' ? GOSSIP_BLAME_CHAINS : GOSSIP_ASK_CHAINS)];
+    }
+    case 'soul': {
+      const ask = r() < 0.6;
+      return [{ who: 0, text: one(ask ? SOUL_ASK : SOUL_DRAIN, r) }, ...pickChain(ask ? SOUL_ASK_CHAINS : SOUL_DRAIN_CHAINS)];
     }
     case 'push':
       return [{ who: 0, text: crowdLine('push', c.b.name, type, sub(seed, 'c')) }, ...pickChain(PUSH_CHAINS)];

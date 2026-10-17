@@ -1004,3 +1004,10 @@ code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; back
 .credits nav { display: flex; gap: 16px; flex-wrap: wrap; }
 .credits a { color: var(--gold); text-decoration: none; }
 .credits a:hover { text-decoration: underline; }
+
+/* laboratório: palco que se ajusta ao espaço e aceita zoom */
+.lab-stage { position: relative; flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+.lab-fit { flex: 1; min-height: 0; min-width: 0; overflow: auto; display: flex; padding: 8px; }
+.lab-sized { position: relative; flex: none; margin: auto; }
+.lab-zoom { position: absolute; right: 18px; bottom: 14px; z-index: 40; display: flex; gap: 6px; align-items: center; }
+@media (max-width: 860px) { .lab-fit { overflow-x: auto; } }

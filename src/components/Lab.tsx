@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { levelOf } from '../data/agents';
 import { soulName } from '../data/quotes';
 import { SCROLL_FLIGHT_MS, SCROLL_HANDOFF_MS, SOUL_MS, SOUL_TASKS } from '../engine/game';
@@ -120,6 +120,12 @@ interface Props {
   banner?: React.ReactNode;
 }
 
+/** tamanho de projeto do mapa (a proporção é fixa; o resto é escala) e limites do zoom (1 = ajustado ao espaço) */
+const MAP_W = 860;
+const MAP_H = 820;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
+
 export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask, banner, connected = false, hasProject = false }: Props) {
   const now = Date.now();
   const handingOff = (t: Task) => !!t.assignedAt && now - t.assignedAt < SCROLL_HANDOFF_MS;
@@ -208,6 +214,40 @@ export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask,
   }
   const drained = new Set(souls.map((sl) => haunting.get(sl.id)).filter(Boolean) as string[]);
 
+  // ---- ajuste ao espaço + zoom: o mapa é desenhado num tamanho fixo e escalado inteiro (posições, mesas e sprites juntos) ----
+  const fitBox = useRef<HTMLDivElement>(null);
+  const [avail, setAvail] = useState<{ w: number; h: number } | null>(null);
+  const [zoom, setZoom] = useState(() => {
+    try {
+      const z = Number(localStorage.getItem('agent-arena:labzoom'));
+      return z >= ZOOM_MIN && z <= ZOOM_MAX ? z : 1;
+    } catch {
+      return 1;
+    }
+  });
+  useEffect(() => {
+    const el = fitBox.current;
+    if (!el) return;
+    const measure = () => setAvail({ w: el.clientWidth - 16, h: el.clientHeight - 16 }); // 16 = padding do palco
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const changeZoom = (z: number) => {
+    const v = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) * 100) / 100;
+    setZoom(v);
+    try {
+      localStorage.setItem('agent-arena:labzoom', String(v));
+    } catch {
+      /* sem storage: vale só agora */
+    }
+  };
+  // celular: a página rola, então só a largura limita; no desktop cabe na largura e na altura
+  const narrow = typeof window !== 'undefined' && window.innerWidth <= 860;
+  const fit = avail && avail.w > 0 ? Math.min(avail.w / MAP_W, narrow || avail.h < 160 ? Infinity : avail.h / MAP_H) : 0.7;
+  const scale = Math.max(0.2, fit) * zoom;
+
   // ---- voos dos pergaminhos (origem/destino e atraso congelados na montagem, para não pular) ----
   const flights = useRef(new Map<string, { from: Pt; to: Pt }>());
   const started = useRef(new Map<string, number>());
@@ -239,7 +279,10 @@ export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask,
   const at = (p: Pt) => ({ left: `${p[0]}%`, top: `${p[1]}%` });
 
   return (
-    <div className="arena cr lab">
+    <div className="lab-stage">
+      <div className="lab-fit" ref={fitBox} onWheel={(e) => e.ctrlKey && (e.preventDefault(), changeZoom(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)))}>
+        <div className="lab-sized" style={{ width: MAP_W * scale, height: MAP_H * scale }}>
+          <div className="arena cr lab" style={{ width: MAP_W, height: MAP_H, transform: `scale(${scale})`, transformOrigin: '0 0', position: 'absolute', left: 0, top: 0, flex: 'none', maxWidth: 'none', minHeight: 0 }}>
       {banner}
 
       {/* ---- cômodos: pisos e paredes da planta ---- */}
@@ -480,6 +523,14 @@ export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask,
         })}
 
       {state.tasks.length === 0 && <EmptyArena title="Laboratório vazio" connected={connected} hasProject={hasProject} onAccounts={onAccounts} onProjects={onProjects} />}
+          </div>
+        </div>
+      </div>
+      <div className="lab-zoom" role="group" aria-label="Zoom do mapa">
+        <button className="btn sm" onClick={() => changeZoom(zoom / 1.25)} disabled={zoom <= ZOOM_MIN} title="Diminuir o zoom (Ctrl + roda do mouse)" aria-label="Diminuir o zoom">−</button>
+        <button className="btn sm ghost" onClick={() => changeZoom(1)} title="Ajustar o mapa ao espaço">{Math.round(zoom * 100)}%</button>
+        <button className="btn sm" onClick={() => changeZoom(zoom * 1.25)} disabled={zoom >= ZOOM_MAX} title="Aumentar o zoom (Ctrl + roda do mouse)" aria-label="Aumentar o zoom">+</button>
+      </div>
     </div>
   );
 }

@@ -182,6 +182,9 @@ const MEME = [
   'Deploy em produção sem teste? Hoje eu tô corajoso.',
   'Ctrl+C, Ctrl+V e reza.',
   'Que merda é essa de dependência quebrada?',
+  'Coloquei o estagiário pra pegar a chave do container no Lampi, sdds do Xavier.',
+  'Sdds do Xavier, o QA novato que foi buscar a chave do container no Lampi.',
+  'Não existe chave de container no Lampi. Mas o novato não precisa saber.',
   'Não é bug, é feature.',
   'Ontem funcionava, juro por tudo.',
   'Estranho… isso nunca tinha acontecido antes.',
@@ -667,6 +670,20 @@ const GOSSIP_ASK = [
   '{n}! E {xa}? Sumiu?',
   'Alguém viu {xa}? Pergunta pro {n}.',
 ];
+/** a trolagem do novato: mandar alguém buscar a "chave do container" no Lampi (outro laboratório); o Xavier, QA novato, caiu primeiro */
+const STORY_OPEN = [
+  'Coloquei o estagiário pra pegar a chave do container no Lampi, sdds do Xavier.',
+  'Mandei o estagiário buscar a chave do container no Lampi. Sdds do Xavier…',
+  'O estagiário foi pro Lampi atrás da chave do container. Sdds do Xavier.',
+];
+const STORY_CHAINS: Chain[] = [
+  [[1, 'No Lampi? Aquele outro laboratório?'], [0, 'Esse mesmo. Não existe chave nenhuma.'], [1, 'Trolagem clássica. Igual fizeram com o Xavier.']],
+  [[1, 'Quem era o Xavier mesmo?'], [0, 'O QA novato que a gente mandou pegar a chave do container no Lampi.'], [1, 'Ele ainda deve estar lá procurando. Sdds do Xavier.']],
+  [[1, 'E o estagiário foi mesmo?'], [0, 'Foi. Levou até o crachá.'], [1, 'Igualzinho ao Xavier. Todo novato cai.']],
+  [[1, 'Pelo menos o estagiário tá ocupado.'], [0, 'E eu tô em paz. Sdds do Xavier, que também caiu nessa.'], [1, 'Chave do container no Lampi… clássico.']],
+  [[1, 'Já avisaram que não tem chave?'], [0, 'Ainda não. Deixa ele ir até a recepção do Lampi.'], [1, 'O Xavier voltou só no dia seguinte, lembra?']],
+];
+
 /** depois que alguém acusa: a conversa segue (0 = quem acusou, 1 = quem ouviu) */
 const GOSSIP_BLAME_CHAINS: Chain[] = [
   [[1, 'De novo?! Foi no commit de ontem?'], [0, 'Foi. Eu avisei na daily.'], [1, 'Manda o {n} arrumar antes do cliente ver.']],
@@ -895,6 +912,8 @@ export function thread(kind: ThreadKind, c: ThreadCtx, seed?: string): Turn[] {
     case 'review':
       return pickChain(REVIEW_CHAINS);
     case 'gossip': {
+      // de vez em quando, a história do estagiário e da chave do container
+      if (r() < 0.25) return [{ who: 0, text: one(STORY_OPEN, r) }, ...pickChain(STORY_CHAINS)];
       const g = gossipOne(r);
       Object.assign(v, { n: g.n, x: g.x, xa: g.xa });
       return [{ who: 0, text: g.text }, ...pickChain(g.kind === 'blame' ? GOSSIP_BLAME_CHAINS : GOSSIP_ASK_CHAINS)];

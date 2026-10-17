@@ -10,6 +10,7 @@ import { AgentTerminal } from './components/AgentTerminal';
 import { Deliveries } from './components/Deliveries';
 import { Ecosystem } from './components/Ecosystem';
 import { Chat } from './components/Chat';
+import { Credits } from './components/Credits';
 import { Feed } from './components/Feed';
 import { Lab } from './components/Lab';
 import { HeroBar } from './components/HeroBar';
@@ -352,11 +353,13 @@ export function App() {
 
         <div className="side-stack">
           <Feed state={shown} />
-          <Chat state={shown} />
+          <Chat state={shown} onMuted={(muted) => dispatch({ type: 'setMuted', muted })} />
         </div>
       </div>
 
       <HeroBar state={shown} onAgent={mirrored ? (id) => setPanel({ liveWorker: id }) : openAgent} onNew={() => setPanel({ draft: newAgent() })} onExport={exportAgents} />
+
+      <Credits />
 
       {panel === 'livepick' && live.data && <LivePicker data={live.data} onPick={setMirror} onClose={() => setPanel(null)} />}
       {liveWorker && <LiveHistory worker={liveWorker} onClose={() => setPanel(null)} />}

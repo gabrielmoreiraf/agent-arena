@@ -189,6 +189,9 @@ export interface GameState {
   feed: FeedItem[];
   /** conversa dos agentes (mais antiga primeiro) */
   chat?: ChatMsg[];
+  /** papo silenciado: ninguém fala (nem balão, nem papo) até reativar */
+  muted?: boolean;
+  mutedAt?: number;
   providers: Provider[];
   bubbles: Bubble[];
   speed: 0 | 1 | 3;

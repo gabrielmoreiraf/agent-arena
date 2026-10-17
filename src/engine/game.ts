@@ -36,6 +36,7 @@ export type Action =
   | { type: 'addTasks'; tasks: RawTask[]; projectDir?: string }
   | { type: 'deleteTask'; id: string }
   | { type: 'setSpeed'; speed: GameState['speed'] }
+  | { type: 'setMuted'; muted: boolean }
   | { type: 'saveAgent'; agent: Agent }
   | { type: 'deleteAgent'; id: string }
   | { type: 'updateProvider'; provider: Provider }
@@ -66,6 +67,7 @@ const CHAT_MAX = 120;
 
 /** balão de fala; por padrão a fala também vai para o papo dos agentes (toId = com quem fala) */
 function say(s: GameState, agentId: string, text: string, ms = 3500, delay = 0, chat: { toId?: string; monster?: string } | false = {}) {
+  if (s.muted) return;
   // monstros e almas só falam no papo dos agentes: sem balão no mapa
   if (!agentId.startsWith('m:') && !agentId.startsWith('s:')) {
     s.bubbles = s.bubbles.filter((b) => b.agentId !== agentId);
@@ -136,7 +138,7 @@ function monsterTalk(s: GameState) {
 
 /** de vez em quando dois agentes puxam papo: farpa com revide, ou desabafo de trabalho com resposta */
 function chatter(s: GameState) {
-  if (s.agents.length < 2 || Math.random() > 0.05) return;
+  if (s.agents.length < 2 || !s.tasks.length || Math.random() > 0.05) return;
   const a = s.agents[Math.floor(Math.random() * s.agents.length)];
   const others = s.agents.filter((x) => x.id !== a.id);
   const b = others[Math.floor(Math.random() * others.length)];
@@ -500,6 +502,7 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case 'addTasks': {
       const s = clone(state);
+      s.muted = false; // tarefa nova: os agentes já começam o papo
       const now = Date.now();
       const created: Task[] = action.tasks.map((r, i) => ({
         id: uid('t'),
@@ -537,6 +540,8 @@ export function reducer(state: GameState, action: Action): GameState {
       }
       return s;
     }
+    case 'setMuted':
+      return { ...state, muted: action.muted, mutedAt: action.muted ? Date.now() : state.mutedAt, bubbles: action.muted ? [] : state.bubbles };
     case 'setSpeed':
       return { ...state, speed: action.speed };
     case 'saveAgent': {

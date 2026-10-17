@@ -1,9 +1,12 @@
 import { useRef } from 'react';
 import { levelOf } from '../data/agents';
 import { SCROLL_FLIGHT_MS, SCROLL_HANDOFF_MS } from '../engine/game';
-import { ATTACK_SCALE, HITS_PER_CYCLE, MONSTER_SIZE, attackFor } from '../sprites/attacks';
+import { MONSTER_SIZE } from '../sprites/attacks';
 import { MONSTERS, MONSTER_BY_TYPE, MONSTER_INFO } from '../sprites/monsters';
 import { PixelSprite } from '../sprites/PixelSprite';
+import { SCROLL_OPEN, SCROLL_PAL, SCROLL_ROLLED } from '../sprites/props';
+import { AttackFx } from './AttackFx';
+import { EmptyArena } from './EmptyArena';
 import type { Agent, GameState, Lane, Task } from '../types';
 
 /**
@@ -36,33 +39,6 @@ const READING: Pt = [50, 62];
 const INCOMING_FROM: Pt = [50, 8];
 const CAMP: Pt[] = [
   [30, 80], [70, 80], [36, 90], [64, 90], [24, 92], [76, 92], [30, 70], [70, 70], [50, 83],
-];
-
-// pergaminhos: a tarefa chega enrolada, o Maestro abre e lê, depois despacha
-const SCROLL_PAL = { o: '#3a2412', p: '#f3dca2', d: '#c9a05a', r: '#c0392b', l: '#6b4a2a' };
-const SCROLL_ROLLED = [
-  '..oooooooooo..',
-  '.oddppppppddo.',
-  'oddpppprrpppdo',
-  'oddpppprrpppdo',
-  'oddppppppppddo',
-  '.oddppppppddo.',
-  '..oooooooooo..',
-];
-const SCROLL_OPEN = [
-  'oooooooooooooo',
-  'oddddddddddddo',
-  '.oppppppppppo.',
-  '.opllllllllpo.',
-  '.oppppppppppo.',
-  '.oplllllllppo.',
-  '.oppppppppppo.',
-  '.opllllllpppo.',
-  '.oppppppppppo.',
-  '.oplllllllppo.',
-  '.oppppppppprro',
-  'oddddddddddrro',
-  'oooooooooooooo',
 ];
 
 const PRINCESS = [
@@ -364,39 +340,8 @@ export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elix
         );
       })}
 
-      {/* ---- golpes: cada agente ataca o monstro com o que está fazendo (tipo da tarefa); tarefa maior, mais e mais pesados golpes ---- */}
-      {onMap
-        .filter((t) => t.status !== 'backlog' && busyIds.has(t.id) && !t.paused)
-        .map((task) => {
-          const agent = state.agents.find((a) => a.currentTaskId === task.id);
-          const a = agent && unitPos.get(agent.id);
-          const m = monsterPos.get(task.id);
-          if (!a || !m) return null;
-          const atk = attackFor(task);
-          const hits = HITS_PER_CYCLE[task.complexity];
-          const px = atk.size * ATTACK_SCALE[task.complexity];
-          return Array.from({ length: hits }, (_, i) => {
-            const vars = {
-              '--x0': `${a[0]}%`,
-              '--y0': `${a[1] - 3}%`,
-              '--x1': `${m[0]}%`,
-              '--y1': `${m[1] - 3.5}%`,
-              '--arc': `${atk.arc * ATTACK_SCALE[task.complexity]}px`,
-              '--spin': `${atk.spin}deg`,
-              '--glow': atk.glow,
-              animationDuration: `${atk.ms}ms`,
-              animationDelay: `${-(i * atk.ms) / hits}ms`,
-            } as React.CSSProperties;
-            return (
-              <span key={`atk-${task.id}-${i}`}>
-                <span className="atk" style={vars} title={atk.name}>
-                  <PixelSprite rows={atk.rows} palette={atk.palette} size={px} />
-                </span>
-                <span className="atk-hit" style={{ ...vars, left: `${m[0]}%`, top: `${m[1] - 3.5}%`, width: px * 1.5, height: px * 1.5 }} />
-              </span>
-            );
-          });
-        })}
+      {/* ---- golpes: cada agente ataca o monstro com o que está fazendo ---- */}
+      <AttackFx tasks={onMap} agents={state.agents} unitPos={unitPos} monsterPos={monsterPos} />
 
       {/* ---- agentes ---- */}
       {state.agents.map((agent: Agent) => {
@@ -467,28 +412,7 @@ export function Arena({ state, onAgent, onAccounts, onProjects, elixir = 1, elix
         <span className="n">{full}</span>
       </div>
 
-      {state.tasks.length === 0 && (
-        <div className="arena-empty">
-          <div className="px">
-            <div className="px-title">Arena vazia</div>
-            {connected && hasProject ? (
-              <div className="hint">Tudo pronto. <b>Escreva uma tarefa</b> na fila, ao lado, e envie ao Maestro: ela vira um pergaminho e os agentes entram em ação.</div>
-            ) : (
-              <>
-                <ol className="empty-steps">
-                  {!connected && <li><b>Conecte uma conta</b> de IA (Claude, Codex, Gemini ou OpenRouter): só as que você quiser.</li>}
-                  {!hasProject && <li><b>Escolha o projeto</b>: crie uma pasta nova ou anexe uma que já existe.</li>}
-                  <li><b>Escreva uma tarefa</b> na fila, ao lado.</li>
-                </ol>
-                <div className="btn-group">
-                  {!connected && <button className="btn gold" onClick={onAccounts}>Conectar conta</button>}
-                  {!hasProject && <button className="btn gold" onClick={onProjects}>Escolher projeto</button>}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {state.tasks.length === 0 && <EmptyArena connected={connected} hasProject={hasProject} onAccounts={onAccounts} onProjects={onProjects} />}
     </div>
   );
 }

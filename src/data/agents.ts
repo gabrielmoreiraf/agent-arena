@@ -14,11 +14,11 @@ type Seed = Omit<Agent, 'xp' | 'stats' | 'queue' | 'builtin' | 'currentTaskId'>;
 const seeds: Seed[] = [
   {
     id: 'maestro',
-    name: 'Maestro',
+    name: 'Dotor',
     role: 'maestro',
     title: 'Orquestrador',
     sprite: 'maestro',
-    palette: { h: '#c9c3d6', c: '#5b2a86', p: '#2c1847', A: '#ffd166', B: '#ff6b6b', C: '#8e3bd1' },
+    palette: { h: '#c9c3d6', c: '#eef1f6', p: '#2c1847', A: '#ffd166', B: '#2a9d8f', C: '#b8c0d0' },
     providerId: 'claude',
     instructions:
       'Você é o Maestro. Lê cada tarefa, classifica tipo e complexidade (P/M/G), escolhe o agente certo e o modelo certo para o custo/benefício. Nunca escreve código: só distribui, acompanha e cobra.',
@@ -126,8 +126,8 @@ const seeds: Seed[] = [
   },
 ];
 
-/** v2: entrou a Lia Pixel (UI/UX) */
-export const ROSTER_VERSION = 2;
+/** v2: entrou a Lia Pixel (UI/UX) · v3: o Maestro agora se chama Dotor */
+export const ROSTER_VERSION = 3;
 
 export function defaultAgents(): Agent[] {
   return seeds.map((s) => ({ ...s, xp: 0, stats: emptyStats(), queue: [], builtin: true }));

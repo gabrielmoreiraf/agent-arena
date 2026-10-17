@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { soulName } from '../data/quotes';
 import { MONSTERS, MONSTER_BY_TYPE, MONSTER_INFO } from '../sprites/monsters';
+import { GHOST, GHOST_PAL } from '../sprites/props';
 import { PixelSprite } from '../sprites/PixelSprite';
 import type { ChatMsg, GameState } from '../types';
 import { Avatar } from './ui';
@@ -12,6 +14,19 @@ export function Chat({ state }: { state: GameState }) {
 
   /** quem fala: agente ou monstro (id "m:<tarefa>") */
   const who = (id: string, monsterType?: string) => {
+    if (id.startsWith('s:')) {
+      // alma de um monstro derrotado: o tipo vem da própria mensagem
+      const type = monsterType ?? 'feature';
+      return {
+        name: soulName(type),
+        side: 'is-monster is-soul',
+        avatar: (
+          <span className="chat-ava soul-ava">
+            <PixelSprite rows={GHOST} palette={GHOST_PAL} size={22} />
+          </span>
+        ),
+      };
+    }
     if (id.startsWith('m:')) {
       // o tipo vem da própria mensagem: a fala do monstro fica no papo mesmo depois que a tarefa termina
       const type = monsterType ?? tasks.get(id.slice(2))?.type;
@@ -19,7 +34,7 @@ export function Chat({ state }: { state: GameState }) {
       const m = MONSTERS[MONSTER_BY_TYPE[type] ?? 'slime'];
       return {
         name: MONSTER_INFO[type]?.name ?? 'Monstro',
-        side: 'monster',
+        side: 'is-monster',
         avatar: (
           <span className="chat-ava">
             <PixelSprite rows={m.rows} palette={m.palette} size={24} />

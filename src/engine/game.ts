@@ -1,6 +1,6 @@
 import { ROSTER_VERSION, defaultAgents, emptyStats, levelOf } from '../data/agents';
 import { defaultProviders, defaultRouting, modelFor, providerFor } from '../data/providers';
-import { MONSTER_NAME, approveLine, maestroLine, rejectLine, replyLine, spawnLine, stanceFor, thread, workLine, type Turn, type Who } from '../data/quotes';
+import { MONSTER_NAME, soulName, approveLine, maestroLine, rejectLine, replyLine, spawnLine, stanceFor, thread, workLine, type Turn, type Who } from '../data/quotes';
 import type { RealEvent, Verdict } from '../../server/runner';
 import type { TriageResult as AITriage } from '../../server/triage';
 import type { Agent, FeedItem, GameState, ProjectMatch, Provider, RawTask, Task, Tier } from '../types';
@@ -66,8 +66,8 @@ const CHAT_MAX = 120;
 
 /** balão de fala; por padrão a fala também vai para o papo dos agentes (toId = com quem fala) */
 function say(s: GameState, agentId: string, text: string, ms = 3500, delay = 0, chat: { toId?: string; monster?: string } | false = {}) {
-  // o monstro só fala no papo dos agentes: sem balão na arena
-  if (!agentId.startsWith('m:')) {
+  // monstros e almas só falam no papo dos agentes: sem balão no mapa
+  if (!agentId.startsWith('m:') && !agentId.startsWith('s:')) {
     s.bubbles = s.bubbles.filter((b) => b.agentId !== agentId);
     s.bubbles.push({ agentId, text, from: Date.now() + delay, until: Date.now() + delay + ms });
   }
@@ -82,6 +82,27 @@ function play(s: GameState, ids: string[], turns: Turn[], o: { gap?: number; del
     const to = i === 0 ? ids[1] : ids[turns[i - 1].who];
     say(s, speaker, t.text, 4200, (o.delay ?? 0) + i * (o.gap ?? 2700), { toId: to, monster: o.monster });
   });
+}
+
+/** quanto tempo as almas de um monstro derrotado rondam o laboratório (2 por monstro, as 4 tarefas mais recentes) */
+export const SOUL_MS = 10 * 60_000;
+export const SOUL_TASKS = 4;
+const soulWho = (type: string): Who => ({ name: soulName(type), role: 'custom', providerId: '' });
+
+/** as almas dos monstros derrotados enchem o pessoal: perguntam o que estão fazendo e sugam a energia */
+function soulTalk(s: GameState) {
+  if (Math.random() > 0.07) return;
+  const now = Date.now();
+  const dead = s.tasks.filter((t) => t.status === 'done' && t.doneAt && now - t.doneAt < SOUL_MS).sort((a, b) => b.doneAt! - a.doneAt!).slice(0, SOUL_TASKS);
+  if (!dead.length) return;
+  const t = dead[Math.floor(Math.random() * dead.length)];
+  const crew = s.agents.filter((a) => a.role !== 'maestro');
+  const busy = crew.filter((a) => a.currentTaskId);
+  const pool = busy.length ? busy : crew;
+  if (!pool.length) return;
+  const agent = pool[Math.floor(Math.random() * pool.length)];
+  const n = 1 + Math.floor(Math.random() * 2);
+  play(s, [`s:${t.id}:${n}`, agent.id], thread('soul', { a: soulWho(t.type), b: agent, type: t.type }), { monster: t.type });
 }
 
 const monsterWho = (type: string): Who => ({ name: MONSTER_NAME[type] ?? 'Monstro', role: 'custom', providerId: '' });
@@ -120,7 +141,8 @@ function chatter(s: GameState) {
   const others = s.agents.filter((x) => x.id !== a.id);
   const b = others[Math.floor(Math.random() * others.length)];
   const task = s.tasks.find((t) => t.id === a.currentTaskId) ?? s.tasks.find((t) => t.id === b.currentTaskId);
-  play(s, [a.id, b.id], thread(Math.random() < 0.55 ? 'farpa' : 'work', { a, b, type: task?.type }));
+  const p = Math.random();
+  play(s, [a.id, b.id], thread(p < 0.4 ? 'farpa' : p < 0.7 ? 'gossip' : 'work', { a, b, type: task?.type }));
 }
 
 /** Tokens REAIS (usage do Claude Code). A execução real sempre roda no Claude. */
@@ -156,6 +178,11 @@ function startNext(s: GameState, agent: Agent) {
     agent.queue.shift();
     if (!task || task.status === 'done') continue;
     agent.currentTaskId = id;
+    // o QA caminha até a bancada do dev e os dois discutem a task
+    if (task.status === 'review' && task.reviewerId === agent.id) {
+      const dev = s.agents.find((a) => a.id === task.assigneeId);
+      if (dev) play(s, [agent.id, dev.id], thread('review', { a: agent, b: dev, type: task.type, title: shortTitle(task.title) }), { delay: 2600 });
+    }
     if (task.status === 'backlog') {
       task.status = 'in_progress';
       if (task.assignedAt && !task.bounces) {
@@ -383,6 +410,7 @@ function tick(s: GameState) {
   chatter(s);
   spectate(s);
   monsterTalk(s);
+  soulTalk(s);
 
   for (const agent of s.agents.filter(isWorker)) {
     startNext(s, agent);
@@ -707,6 +735,9 @@ export function loadState(): GameState {
         // partidas antigas: traz os agentes padrão que entraram depois (ex.: UI/UX)
         if ((s.rosterVersion ?? 1) < ROSTER_VERSION) {
           for (const a of defaultAgents()) if (!s.agents.some((x) => x.id === a.id)) s.agents.push(a);
+          // v3: o líder padrão passa a se chamar Dotor (só se ninguém tinha mudado o nome)
+          const lider = s.agents.find((x) => x.id === 'maestro' && x.builtin && x.name === 'Maestro');
+          if (lider) lider.name = 'Dotor';
           s.rosterVersion = ROSTER_VERSION;
         }
         return { ...initialState(), ...s, bubbles: [] };

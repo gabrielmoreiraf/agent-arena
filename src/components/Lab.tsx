@@ -65,6 +65,9 @@ const DESKS: Desk[] = [
   { pc: [30.6, 67.8], seat: [30.6, 75.5], visit: [25.2, 75.5], flip: false, mon: [26.4, 69.3] },
 ];
 
+/** ordem em que os agentes ocupam as bancadas: intercalada, para ficarem espalhados pelo laboratório e não todos juntos */
+const DESK_ORDER = [0, 11, 5, 14, 3, 7, 12, 9, 1, 13, 4, 15, 2, 8, 10, 6];
+
 /** mesas (os retângulos vermelhos da planta): x, y = centro, w, h em % */
 const TABLES = [
   { id: 'leader', x: 21, y: 21.3, w: 11.6, h: 29.3 },
@@ -123,7 +126,9 @@ export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask,
 
   // bancada de cada agente (o líder não tem: ele tem a sala)
   const crew = state.agents.filter((a) => a.role !== 'maestro');
-  const deskOf = new Map<string, Desk>(crew.map((a, i) => [a.id, DESKS[i % DESKS.length]]));
+  const deskIndex = (i: number) => DESK_ORDER[i % DESK_ORDER.length];
+  const deskOf = new Map<string, Desk>(crew.map((a, i) => [a.id, DESKS[deskIndex(i)]]));
+  const usedDesks = new Set(crew.map((_, i) => deskIndex(i)));
   const key = (d: Desk) => `${d.pc[0]}:${d.pc[1]}`;
 
   // ---- pergaminhos: entram pela porta da entrada, vão para a sala do líder, ele lê e despacha para a bancada ----
@@ -232,7 +237,6 @@ export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask,
   const working = state.tasks.filter((t) => t.status === 'in_progress').length;
   const reviewing = state.tasks.filter((t) => t.status === 'review').length;
   const at = (p: Pt) => ({ left: `${p[0]}%`, top: `${p[1]}%` });
-  const used = Math.max(crew.length, 1);
 
   return (
     <div className="arena cr lab">
@@ -316,10 +320,10 @@ export function Lab({ state, onAgent, onAccounts, onProjects, onControl, onTask,
 
       {/* ---- computadores das bancadas (os livres ficam desligados) ---- */}
       {DESKS.map((d, i) => {
-        const use = i < used ? deskUse.get(key(d)) : undefined;
+        const use = usedDesks.has(i) ? deskUse.get(key(d)) : undefined;
         return (
           <div key={`pc-${key(d)}`}>
-            <div className={`lab-prop ${i >= used ? 'off' : ''}`} style={at(d.pc)}>
+            <div className={`lab-prop ${usedDesks.has(i) ? '' : 'off'}`} style={at(d.pc)}>
               <PixelSprite rows={PC} palette={PC_PAL} size={42} />
               {use && <i className={`lab-code ${use}`} />}
             </div>
